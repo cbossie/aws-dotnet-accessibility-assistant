@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Sample SAM Template for aws-dotnet-textract
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - test
+      - prod
+
+
+Globals:
+  # Global attributes for each function
+  Function:
+    Timeout: 10
+    Runtime: dotnet6
+    MemorySize: 256
+    Architectures:
+      - arm64    
+    
+
+
+
+Resources:
+  SendToTextract:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SendToTextract
+      CodeUri: ./src/ServerlessTextToSpeech.SendToTextract
+      Handler: ServerlessTextToSpeech.SendToTextract
+  PublishMetaData:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: PublishMetaData
+      CodeUri: ./src/ServerlessTextToSpeech.PublishMetaData
+      Handler: ServerlessTextToSpeech.PublishMetaData
+  ProcessText:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: ProcessText
+      CodeUri: ./src/ServerlessTextToSpeech.ProcessText
+      Handler: ServerlessTextToSpeech.ProcessText
+      

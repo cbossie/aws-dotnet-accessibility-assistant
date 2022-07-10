@@ -58,6 +58,6 @@ If already installed check if new version is available.
 
 Deploy function to AWS Lambda
 ```
-    cd "aws-dotnet-textract/src/aws-dotnet-textract"
+    cd "ServerlessTextToSpeech.SendToTextract/src/ServerlessTextToSpeech.SendToTextract"
     dotnet lambda deploy-function
 ```
