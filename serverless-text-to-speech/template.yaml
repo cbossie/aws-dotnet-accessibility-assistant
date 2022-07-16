@@ -26,6 +26,7 @@ Globals:
 
 
 Resources:
+#Functions
   SendToTextract:
     Type: AWS::Serverless::Function
     Properties:
@@ -44,4 +45,41 @@ Resources:
       FunctionName: ProcessText
       CodeUri: ./src/ServerlessTextToSpeech.ProcessText
       Handler: ServerlessTextToSpeech.ProcessText
-      
+
+#S3 buckets
+  SourceBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Join
+          - 'serverles-source-data-'
+          - !Ref Environment
+  OutputBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Join
+          - 'serverles-output-data-'
+          - !Ref Environment
+
+#Database
+  MetaDataTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: 
+        Fn::Join
+          - 'serverless-data-'
+          - !Ref Environment
+
+#Step FUnction
+  ProcessWorkflow:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineType: XXX
+      Definition: ./
+        
+
+
+
+
+
