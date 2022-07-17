@@ -1,0 +1,7 @@
+Comment: State Machine used for text to speech workflow
+Version: '1.0'
+StartAt: TestState
+States:
+  TestState:
+    Type: Pass
+    End: true

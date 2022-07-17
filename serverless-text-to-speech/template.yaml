@@ -20,8 +20,7 @@ Globals:
     Runtime: dotnet6
     MemorySize: 256
     Architectures:
-      - arm64    
-    
+      - arm64
 
 
 
@@ -50,34 +49,57 @@ Resources:
   SourceBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName:
-        Fn::Join
-          - 'serverles-source-data-'
-          - !Ref Environment
+      BucketName: !Join [ "-", ["serverles-source-data", !Ref Environment]]
   OutputBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName:
-        Fn::Join
-          - 'serverles-output-data-'
-          - !Ref Environment
-
+      BucketName: !Join [ "-", ["serverless-output-data", !Ref Environment]]
 #Database
   MetaDataTable:
     Type: AWS::Serverless::SimpleTable
     Properties:
-      TableName: 
-        Fn::Join
-          - 'serverless-data-'
-          - !Ref Environment
+      TableName: !Join ["-", ["serverless_data", !Ref Environment]]
 
-#Step FUnction
-  ProcessWorkflow:
-    Type: AWS::StepFunctions::StateMachine
+#Step Function and related data
+  ProcessStateMachine:
+    Type: AWS::Serverless::StateMachine
     Properties:
-      StateMachineType: XXX
-      Definition: ./
-        
+
+      Name: "TextToSpeechStateMachine"
+      Type: STANDARD
+      DefinitionUri: ./statemachine.asl.yaml
+      DefinitionSubstitutions:
+        SendToTextractFunction: !GetAtt SendToTextract.Arn
+        PublishMetadataFunction: !GetAtt PublishMetaData.Arn
+        ProcessTextFunction: !GetAtt ProcessText.Arn
+      Role: !Ref StateMachineRole.Arn
+  StateMachineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join ["-", ["stepfunction-role", !Ref Environment]]
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - states.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+              - lambda:InvokeFunction
+              Resource:
+              - !Ref SourceBucket.Arn
+              - !Ref PublishMetaData.Arn
+              ` !Ref ProcessText.Arn
+                  
+          PolicyName: LambdaExecution
+
 
 
 
