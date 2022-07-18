@@ -5,6 +5,7 @@ using Amazon.Lambda.Serialization.SystemTextJson;
 // The function handler that will be called for each Lambda event
 var handler = (string input, ILambdaContext context) =>
 {
+    context.Logger.LogInformation(input);
     return input.ToUpper();
 };
 

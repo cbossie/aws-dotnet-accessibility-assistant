@@ -32,47 +32,116 @@ Resources:
       FunctionName: SendToTextract
       CodeUri: ./src/ServerlessTextToSpeech.SendToTextract
       Handler: ServerlessTextToSpeech.SendToTextract
+      Environment:
+        Variables:
+          INPUT_BUCKET: !Ref SourceBucket
+      Policies:
+        - arn:aws:iam::aws:policy/AmazonTextractFullAccess
+        - S3CrudPolicy:
+            BucketName: !Ref SourceBucket
   PublishMetaData:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: PublishMetaData
       CodeUri: ./src/ServerlessTextToSpeech.PublishMetaData
       Handler: ServerlessTextToSpeech.PublishMetaData
+      Environment:
+        Variables:
+          METADATA_TABLE: !Ref MetaDataTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !GetAtt  MetaDataTable.Arn
+        - S3CrudPolicy:
+            BucketName: !Ref SoundBucket
+
+
   ProcessText:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: ProcessText
       CodeUri: ./src/ServerlessTextToSpeech.ProcessText
       Handler: ServerlessTextToSpeech.ProcessText
-
+      Environment:
+        Variables:
+          INPUT_BUCKET: !Ref SourceBucket
+          OUTPUT_BUCKET: !Ref OutputBucket
+      Policies:
+        - arn:aws:iam::aws:policy/AmazonPollyFullAccess
+        - S3CrudPolicy:
+            BucketName: !Ref OutputBucket
 #S3 buckets
   SourceBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Join [ "-", ["serverles-source-data", !Ref Environment]]
+      BucketName: !Join [ "-", ["serverless-source-data", !Ref Environment]]
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+      
+
   OutputBucket:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Join [ "-", ["serverless-output-data", !Ref Environment]]
+  SoundBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Join [ "-", ["serverless-sound-files", !Ref Environment]]      
 #Database
   MetaDataTable:
     Type: AWS::Serverless::SimpleTable
     Properties:
       TableName: !Join ["-", ["serverless_data", !Ref Environment]]
 
-#Step Function and related data
-  ProcessStateMachine:
-    Type: AWS::Serverless::StateMachine
+#EventBridge
+  NotifyFileUploadedRule:
+    Type: AWS::Events::Rule
     Properties:
+      Description: "Triggers a step function based on an upload to S3"
+      EventPattern:
+        source:
+          - aws.s3
+        detail-type:
+          - 'Object Created'
+        detail:
+          bucket:
+            name:
+            - !Ref SourceBucket
+      Targets:
+        -
+          Arn:
+            !GetAtt ProcessStateMachine.Arn
+          RoleArn: !GetAtt StateMachineEventRole.Arn
+          Id: stepFunctionExecution
 
-      Name: "TextToSpeechStateMachine"
-      Type: STANDARD
-      DefinitionUri: ./statemachine.asl.yaml
-      DefinitionSubstitutions:
-        SendToTextractFunction: !GetAtt SendToTextract.Arn
-        PublishMetadataFunction: !GetAtt PublishMetaData.Arn
-        ProcessTextFunction: !GetAtt ProcessText.Arn
-      Role: !Ref StateMachineRole.Arn
+
+  StateMachineEventRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: 2012-10-17
+          Statement:
+            -
+              Effect: Allow
+              Principal:
+                Service:
+                  - events.amazonaws.com
+              Action: sts:AssumeRole
+        Path: /
+        Policies:
+          -
+            PolicyName: statemachine-execution
+            PolicyDocument:
+              Version: 2012-10-17
+              Statement:
+                -
+                  Effect: Allow
+                  Action: states:StartExecution
+                  Resource: !GetAtt ProcessStateMachine.Arn
+
+
+
+#Step Function and related data
   StateMachineRole:
     Type: AWS::IAM::Role
     Properties:
@@ -92,16 +161,45 @@ Resources:
             Statement:
             - Effect: Allow
               Action:
+              - sns:Publish
+              Resource:
+                - !Ref SuccessTopic
+                - !Ref FailureTopic
+            - Effect: Allow
+              Action:
               - lambda:InvokeFunction
               Resource:
-              - !Ref SourceBucket.Arn
-              - !Ref PublishMetaData.Arn
-              ` !Ref ProcessText.Arn
-                  
+                - !GetAtt SendToTextract.Arn
+                - !GetAtt PublishMetaData.Arn
+                - !GetAtt ProcessText.Arn
           PolicyName: LambdaExecution
+  ProcessStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Name: "TextToSpeechStateMachine"
+      Type: STANDARD
+      DefinitionUri: ./statemachine.asl.yaml
+      DefinitionSubstitutions:
+        SendToTextractFunction: !GetAtt   SendToTextract.Arn
+        PublishMetadataFunction: !GetAtt PublishMetaData.Arn
+        ProcessTextFunction: !GetAtt ProcessText.Arn
+        SuccessTopic: !Ref SuccessTopic
+        FailureTopic: !Ref FailureTopic
+        MetadataTable: !GetAtt MetaDataTable.Arn
+      Role: !GetAtt StateMachineRole.Arn
 
 
+#SNS Topics
+  SuccessTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: TextToSpeechSuccessTopic
+      TopicName: !Join ["-", ["TextToSpeechSuccess", !Ref Environment] ]
 
-
+  FailureTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: TextToSpeechFailureTopic
+      TopicName: !Join ["-", ["TextToSpeechFailure", !Ref Environment] ]
 
 

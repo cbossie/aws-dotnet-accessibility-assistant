@@ -1,7 +1,125 @@
 Comment: State Machine used for text to speech workflow
 Version: '1.0'
-StartAt: TestState
+StartAt: Send to Textract
 States:
-  TestState:
-    Type: Pass
-    End: true
+  Send to Textract:
+    Type: Task
+    Resource: arn:aws:states:::lambda:invoke
+    OutputPath: "$.Payload"
+    Parameters:
+      Payload.$: "$"
+      FunctionName: ${SendToTextractFunction}
+    Retry:
+    - ErrorEquals:
+      - Lambda.ServiceException
+      - Lambda.AWSLambdaException
+      - Lambda.SdkClientException
+      IntervalSeconds: 2
+      MaxAttempts: 6
+      BackoffRate: 2
+    Next: AnalyzeDocument
+    Catch:
+    - ErrorEquals:
+      - States.ALL
+      Comment: Catch Step Failure
+      Next: Publish Fail
+  Publish Fail:
+    Type: Task
+    Resource: arn:aws:states:::sns:publish
+    Parameters:
+      Message.$: "$"
+      TopicArn: ${FailureTopic}
+    Next: Fail
+  Fail:
+    Type: Fail
+  AnalyzeDocument:
+    Type: Task
+    Next: Get Text Blocks
+    Parameters:
+      Document: {}
+      FeatureTypes:
+      - MyData
+    Resource: arn:aws:states:::aws-sdk:textract:analyzeDocument
+    Catch:
+    - ErrorEquals:
+      - States.ALL
+      Next: Publish Fail
+  Get Text Blocks:
+    Type: Task
+    Resource: arn:aws:states:::lambda:invoke
+    OutputPath: "$.Payload"
+    Parameters:
+      Payload.$: "$"
+      FunctionName: ${ProcessTextFunction}
+    Retry:
+    - ErrorEquals:
+      - Lambda.ServiceException
+      - Lambda.AWSLambdaException
+      - Lambda.SdkClientException
+      IntervalSeconds: 2
+      MaxAttempts: 6
+      BackoffRate: 2
+    Next: StartSpeechSynthesisTask
+    Catch:
+    - ErrorEquals:
+      - States.ALL
+      Next: Publish Fail
+  StartSpeechSynthesisTask:
+    Type: Task
+    Next: Publish Metadata
+    Parameters:
+      OutputFormat: MyData
+      OutputS3BucketName: MyData
+      Text: MyData
+      VoiceId: MyData
+    Resource: arn:aws:states:::aws-sdk:polly:startSpeechSynthesisTask
+    Catch:
+    - ErrorEquals:
+      - States.ALL
+      Next: Publish Fail
+  Publish Metadata:
+    Type: Task
+    Resource: arn:aws:states:::lambda:invoke
+    OutputPath: "$.Payload"
+    Parameters:
+      Payload.$: "$"
+      FunctionName: ${PublishMetadataFunction}
+    Retry:
+    - ErrorEquals:
+      - Lambda.ServiceException
+      - Lambda.AWSLambdaException
+      - Lambda.SdkClientException
+      IntervalSeconds: 2
+      MaxAttempts: 6
+      BackoffRate: 2
+    Next: Output Metadata
+    Catch:
+    - ErrorEquals:
+      - States.ALL
+      Next: Publish Fail
+  Output Metadata:
+    Type: Task
+    Resource: arn:aws:states:::dynamodb:putItem
+    Parameters:
+      TableName: MyDynamoDBTable
+      Item:
+        Column:
+          S: MyEntry
+    Next: Publish Success
+    Catch:
+    - ErrorEquals:
+      - States.ALL
+      Next: Publish Fail
+  Publish Success:
+    Type: Task
+    Resource: arn:aws:states:::sns:publish
+    Parameters:
+      Message.$: "$"
+      TopicArn: ${SuccessTopic}
+    Next: Success
+    Catch:
+    - ErrorEquals:
+      - States.ALL
+      Next: Publish Fail
+  Success:
+    Type: Succeed
