@@ -1,12 +1,19 @@
 using Amazon.Lambda.Core;
 using Amazon.Lambda.RuntimeSupport;
 using Amazon.Lambda.Serialization.SystemTextJson;
+using ServerlessTextToSpeech.Common;
+using System.Text.Json;
+
+// Boostrap DI
+Bootstrap.ConfigureServices();
+
 
 // The function handler that will be called for each Lambda event
-var handler = (string input, ILambdaContext context) =>
+var handler = async (ServerlessTextToSpeech.Common.TextToSpeechModel inputModel, ILambdaContext context) =>
 {
-    context.Logger.LogInformation(input);
-    return input.ToUpper();
+    context.Logger.LogInformation(JsonSerializer.Serialize(inputModel));
+    //Tests
+    return inputModel;
 };
 
 // Build the Lambda runtime client passing in the handler to call for each

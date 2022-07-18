@@ -6,4 +6,14 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Amazon.Lambda.RuntimeSupport" Version="1.8.0" />
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.3.57" />
+    <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.2" />
+    <PackageReference Include="AWSSDK.Polly" Version="3.7.6.6" />
+    <PackageReference Include="AWSSDK.StepFunctions" Version="3.7.0.181" />
+    <PackageReference Include="AWSSDK.Textract" Version="3.7.5.32" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
+  </ItemGroup>
+
 </Project>

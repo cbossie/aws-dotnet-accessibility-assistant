@@ -1,8 +1,19 @@
 Comment: State Machine used for text to speech workflow
 Version: '1.0'
-StartAt: Send to Textract
+StartAt: MapInput
 States:
-  Send to Textract:
+
+  MapInput:
+    Type: Pass
+    Next: SendToTextract
+    Parameters:
+      id.$: "$.id"
+      bucket.$: "$.detail.bucket.name"
+      key.$: "$.detail.object.key"
+      time.$: "$.time"
+      region.$: "$.region"
+    ResultPath: "$"
+  SendToTextract:
     Type: Task
     Resource: arn:aws:states:::lambda:invoke
     OutputPath: "$.Payload"
@@ -32,14 +43,29 @@ States:
     Next: Fail
   Fail:
     Type: Fail
+
   AnalyzeDocument:
     Type: Task
     Next: Get Text Blocks
+    
+    
     Parameters:
-      Document: {}
-      FeatureTypes:
-      - MyData
-    Resource: arn:aws:states:::aws-sdk:textract:analyzeDocument
+      DocumentLocation:
+        S3Object:
+          Bucket.$: $.bucket
+          Name.$: $.key
+      OutputConfig:
+        S3Bucket: ${TextractOutputBucket}
+      NotificationChannel:
+        SnsTopicArn: ${TextractTopic}
+        RoleArn: ${TextractRole}
+      FeatureTypes: []
+    
+    
+    
+    
+    
+    Resource: arn:aws:states:::aws-sdk:textract:startDocumentAnalysis
     Catch:
     - ErrorEquals:
       - States.ALL

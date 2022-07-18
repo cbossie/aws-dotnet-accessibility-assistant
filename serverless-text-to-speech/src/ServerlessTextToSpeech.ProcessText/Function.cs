@@ -1,21 +1,16 @@
 using Amazon.Lambda.Core;
+using Amazon.Lambda.RuntimeSupport;
+using Amazon.Lambda.Serialization.SystemTextJson;
 
-// Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
-[assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer))]
-
-namespace ServerlessTextToSpeech.ProcessText;
-
-public class Function
+// The function handler that will be called for each Lambda event
+var handler = (string input, ILambdaContext context) =>
 {
-    
-    /// <summary>
-    /// A simple function that takes a string and does a ToUpper
-    /// </summary>
-    /// <param name="input"></param>
-    /// <param name="context"></param>
-    /// <returns></returns>
-    public string FunctionHandler(string input, ILambdaContext context)
-    {
-        return input.ToUpper();
-    }
-}
+    return input.ToUpper();
+};
+
+// Build the Lambda runtime client passing in the handler to call for each
+// event and the JSON serializer to use for translating Lambda JSON documents
+// to .NET types.
+await LambdaBootstrapBuilder.Create(handler, new DefaultLambdaJsonSerializer())
+        .Build()
+        .RunAsync();

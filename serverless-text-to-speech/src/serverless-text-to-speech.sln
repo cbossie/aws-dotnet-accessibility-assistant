@@ -11,8 +11,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServerlessTextToSpeech.Proc
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServerlessTextToSpeech.PublishMetaData", "ServerlessTextToSpeech.PublishMetaData\ServerlessTextToSpeech.PublishMetaData.csproj", "{871FF68A-740B-4B79-9D3A-66EFB713B13B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AwsDotnetAccessibilityAssistantCdk", "AwsDotnetAccessibilityAssistantCdk\AwsDotnetAccessibilityAssistantCdk.csproj", "{C41ADBE3-A072-487F-A8BD-C49A47D33207}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -35,10 +33,6 @@ Global
 		{871FF68A-740B-4B79-9D3A-66EFB713B13B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{871FF68A-740B-4B79-9D3A-66EFB713B13B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{871FF68A-740B-4B79-9D3A-66EFB713B13B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C41ADBE3-A072-487F-A8BD-C49A47D33207}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C41ADBE3-A072-487F-A8BD-C49A47D33207}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C41ADBE3-A072-487F-A8BD-C49A47D33207}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C41ADBE3-A072-487F-A8BD-C49A47D33207}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
