@@ -35,6 +35,10 @@ Resources:
       Environment:
         Variables:
           INPUT_BUCKET: !Ref SourceBucket
+          TEXTRACT_ROLE: !GetAtt TextractRole.Arn
+          TEXTRACT_TOPIC: !Ref TextractTopic
+          OUTPUT_BUCKET: !Ref OutputBucket
+          OUTPUT_PREFIX: output
       Policies:
         - arn:aws:iam::aws:policy/AmazonTextractFullAccess
         - S3CrudPolicy:
@@ -113,8 +117,6 @@ Resources:
             !GetAtt ProcessStateMachine.Arn
           RoleArn: !GetAtt StateMachineEventRole.Arn
           Id: stepFunctionExecution
-
-
   StateMachineEventRole:
       Type: AWS::IAM::Role
       Properties:
@@ -154,6 +156,8 @@ Resources:
                 - states.amazonaws.com
             Action:
               - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
       Policies:
         - PolicyDocument:
             Version: '2012-10-17'
@@ -166,19 +170,25 @@ Resources:
         - PolicyDocument:
             Version: '2012-10-17'
             Statement:
-            - Effect: Allow
+            - Sid: PublishSNS
+              Effect: Allow
               Action:
               - sns:Publish
               Resource:
                 - !Ref SuccessTopic
                 - !Ref FailureTopic
-            - Effect: Allow
+            - Sid: InvokeLambda
+              Effect: Allow
               Action:
               - lambda:InvokeFunction
               Resource:
                 - !GetAtt SendToTextract.Arn
                 - !GetAtt PublishMetaData.Arn
                 - !GetAtt ProcessText.Arn
+            - Sid: GetSourceData
+              Effect: Allow
+              Action: s3:Get*
+              Resource: !Join ["/", [!GetAtt SourceBucket.Arn, "*" ]]
           PolicyName: LambdaExecution
   ProcessStateMachine:
     Type: AWS::Serverless::StateMachine
@@ -211,20 +221,25 @@ Resources:
                 - textract.amazonaws.com
             Action:
               - 'sts:AssumeRole'
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AmazonTextractFullAccess
       Policies:
         - PolicyDocument:
             Version: '2012-10-17'
             Statement:
-            - Effect: Allow
+            - Sid: PublishSns
+              Effect: Allow
               Action:
               - sns:Publish
               Resource:
                 - !Ref TextractTopic
+            - Sid: GetSourceData
+              Effect: Allow
+              Action: s3:Get*
+              Resource: !Join ["/", [!GetAtt SourceBucket.Arn, "*" ]]
+            - Sid: WriteDestinationData
+              Effect: Allow
+              Action: s3:PutObject
+              Resource: !Join ["/", [!GetAtt OutputBucket.Arn, "*" ]]
           PolicyName: TextractRole
-
-
 #SNS Topics
   TextractTopic:
     Type: AWS::SNS::Topic

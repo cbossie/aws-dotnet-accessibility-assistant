@@ -18,5 +18,8 @@ public class TextToSpeechModel
     public DateTime? RequestTime { get; set; }
 
     [JsonPropertyName("region")]
-    public string? Region { get; set; }  
+    public string? Region { get; set; }
+
+    [JsonPropertyName("JobId")]
+    public string JobId { get; set; }
 }

@@ -1,6 +1,8 @@
 using Amazon.Lambda.Core;
 using Amazon.Lambda.RuntimeSupport;
 using Amazon.Lambda.Serialization.SystemTextJson;
+using Amazon.Textract;
+using Microsoft.Extensions.DependencyInjection;
 using ServerlessTextToSpeech.Common;
 using System.Text.Json;
 
@@ -12,7 +14,18 @@ Bootstrap.ConfigureServices();
 var handler = async (ServerlessTextToSpeech.Common.TextToSpeechModel inputModel, ILambdaContext context) =>
 {
     context.Logger.LogInformation(JsonSerializer.Serialize(inputModel));
-    //Tests
+    var textractCli = Bootstrap.ServiceProvider.GetRequiredService<IAmazonTextract>();
+
+    var startDocProcessResult = await textractCli.StartDocumentAnalysisAsync(new()
+    { 
+        DocumentLocation = new
+        {
+
+        }
+    });
+
+
+
     return inputModel;
 };
 

@@ -35,7 +35,6 @@ public static class Bootstrap
         Services.AddAWSService<IAmazonStepFunctions>();
 
         ServiceProvider = Services.BuildServiceProvider();
-
     }
 
 

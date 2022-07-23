@@ -47,9 +47,8 @@ States:
   AnalyzeDocument:
     Type: Task
     Next: Get Text Blocks
-    
-    
     Parameters:
+      TaskToken.?: $$.Task.Token
       DocumentLocation:
         S3Object:
           Bucket.$: $.bucket
@@ -59,13 +58,8 @@ States:
       NotificationChannel:
         SnsTopicArn: ${TextractTopic}
         RoleArn: ${TextractRole}
-      FeatureTypes: []
-    
-    
-    
-    
-    
-    Resource: arn:aws:states:::aws-sdk:textract:startDocumentAnalysis
+      FeatureTypes: ["TABLES" ,"FORMS"]
+    Resource: arn:aws:states:::aws-sdk:textract:startDocumentAnalysis.waitForTaskToken
     Catch:
     - ErrorEquals:
       - States.ALL
