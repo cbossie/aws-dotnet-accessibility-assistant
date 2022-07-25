@@ -21,5 +21,8 @@ public class TextToSpeechModel
     public string? Region { get; set; }
 
     [JsonPropertyName("JobId")]
-    public string JobId { get; set; }
+    public string? TextractJobId { get; set; }
+
+    [JsonPropertyName("JobId")]
+    public string? TaskToken {get;set;}
 }

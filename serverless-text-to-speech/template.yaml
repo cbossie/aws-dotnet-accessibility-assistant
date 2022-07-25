@@ -34,7 +34,6 @@ Resources:
       Handler: ServerlessTextToSpeech.SendToTextract
       Environment:
         Variables:
-          INPUT_BUCKET: !Ref SourceBucket
           TEXTRACT_ROLE: !GetAtt TextractRole.Arn
           TEXTRACT_TOPIC: !Ref TextractTopic
           OUTPUT_BUCKET: !Ref OutputBucket

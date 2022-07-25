@@ -13,12 +13,18 @@ States:
       time.$: "$.time"
       region.$: "$.region"
     ResultPath: "$"
+  
+  
+  
+  
+  
   SendToTextract:
     Type: Task
-    Resource: arn:aws:states:::lambda:invoke
+    Resource: arn:aws:states:::lambda:invoke.waitForTaskToken
     OutputPath: "$.Payload"
     Parameters:
       Payload.$: "$"
+      Payload.TaskToken.$": $$.Task.Token
       FunctionName: ${SendToTextractFunction}
     Retry:
     - ErrorEquals:
@@ -28,12 +34,17 @@ States:
       IntervalSeconds: 2
       MaxAttempts: 6
       BackoffRate: 2
-    Next: AnalyzeDocument
+    Next: GetTextBlocks
     Catch:
     - ErrorEquals:
       - States.ALL
       Comment: Catch Step Failure
       Next: Publish Fail
+
+
+
+
+
   Publish Fail:
     Type: Task
     Resource: arn:aws:states:::sns:publish
@@ -44,27 +55,9 @@ States:
   Fail:
     Type: Fail
 
-  AnalyzeDocument:
-    Type: Task
-    Next: Get Text Blocks
-    Parameters:
-      TaskToken.?: $$.Task.Token
-      DocumentLocation:
-        S3Object:
-          Bucket.$: $.bucket
-          Name.$: $.key
-      OutputConfig:
-        S3Bucket: ${TextractOutputBucket}
-      NotificationChannel:
-        SnsTopicArn: ${TextractTopic}
-        RoleArn: ${TextractRole}
-      FeatureTypes: ["TABLES" ,"FORMS"]
-    Resource: arn:aws:states:::aws-sdk:textract:startDocumentAnalysis.waitForTaskToken
-    Catch:
-    - ErrorEquals:
-      - States.ALL
-      Next: Publish Fail
-  Get Text Blocks:
+
+
+  GetTextBlocks:
     Type: Task
     Resource: arn:aws:states:::lambda:invoke
     OutputPath: "$.Payload"

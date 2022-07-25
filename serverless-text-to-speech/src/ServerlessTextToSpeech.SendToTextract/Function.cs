@@ -2,6 +2,7 @@ using Amazon.Lambda.Core;
 using Amazon.Lambda.RuntimeSupport;
 using Amazon.Lambda.Serialization.SystemTextJson;
 using Amazon.Textract;
+using Amazon.Textract.Model;
 using Microsoft.Extensions.DependencyInjection;
 using ServerlessTextToSpeech.Common;
 using System.Text.Json;
@@ -18,11 +19,29 @@ var handler = async (ServerlessTextToSpeech.Common.TextToSpeechModel inputModel,
 
     var startDocProcessResult = await textractCli.StartDocumentAnalysisAsync(new()
     { 
-        DocumentLocation = new
+        DocumentLocation = new ()
         {
-
-        }
+            S3Object = new ()
+            {
+                Bucket = inputModel.BucketName,
+                Name = inputModel.ObjectKey
+            }
+        },
+        OutputConfig = new ()
+        {
+            S3Bucket = Environment.GetEnvironmentVariable("OUTPUT_BUCKET"),
+            S3Prefix = Environment.GetEnvironmentVariable("OUTPUT_PREFIX")
+        },
+        NotificationChannel = new ()
+        {
+            SNSTopicArn = Environment.GetEnvironmentVariable("TEXTRACT_TOPIC"),
+            RoleArn = Environment.GetEnvironmentVariable("TEXTRACT_ROLE")
+        },
+        FeatureTypes = new (),
+        JobTag = inputModel.Id
     });
+
+
 
 
 
