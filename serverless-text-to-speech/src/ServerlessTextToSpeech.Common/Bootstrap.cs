@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
+using Amazon.DynamoDBv2.DataModel;
 using Amazon.Polly;
 using Amazon.Textract;
 using Amazon.StepFunctions;
@@ -22,18 +23,26 @@ public static class Bootstrap
     {
         Services = new ServiceCollection();
     }
-    
+
     public static void ConfigureServices()
     {
         Services.AddDefaultAWSOptions(new()
         {
-            Region = RegionEndpoint.GetBySystemName(Environment.GetEnvironmentVariable("AWS_REGION"))            
+            Region = RegionEndpoint.GetBySystemName(Environment.GetEnvironmentVariable("AWS_REGION"))
         });
-        Services.AddAWSService<IAmazonDynamoDB>();
+
         Services.AddAWSService<IAmazonPolly>();
         Services.AddAWSService<IAmazonTextract>();
         Services.AddAWSService<IAmazonStepFunctions>();
 
+        // DynamoDB and object model
+        Services.AddAWSService<IAmazonDynamoDB>();
+        Services.AddTransient<IDynamoDBContext>(c => new
+            DynamoDBContext(c.GetService<IAmazonDynamoDB>(),
+                new DynamoDBContextConfig
+                {
+                    TableNamePrefix = $"{Environment.GetEnvironmentVariable("STAGE_NAME")}-"
+                }));
         ServiceProvider = Services.BuildServiceProvider();
     }
 

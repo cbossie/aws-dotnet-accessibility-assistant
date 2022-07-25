@@ -1,10 +1,15 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using Amazon.DynamoDBv2.DataModel;
 
-namespace ServerlessTextToSpeech.Common;
 
+namespace ServerlessTextToSpeech.Common.Model;
+
+[DynamoDBTable("TextToSpeechData")]
 public class TextToSpeechModel
 {
+
+    [DynamoDBHashKey]
     [JsonPropertyName("id")]
     public string? Id { get; set; }
 
@@ -20,9 +25,9 @@ public class TextToSpeechModel
     [JsonPropertyName("region")]
     public string? Region { get; set; }
 
-    [JsonPropertyName("JobId")]
+    [JsonPropertyName("jobid")]
     public string? TextractJobId { get; set; }
 
-    [JsonPropertyName("JobId")]
+    [JsonPropertyName("tasktoken")]
     public string? TaskToken {get;set;}
 }

@@ -23,8 +23,14 @@ States:
     Resource: arn:aws:states:::lambda:invoke.waitForTaskToken
     OutputPath: "$.Payload"
     Parameters:
-      Payload.$: "$"
-      Payload.TaskToken.$": $$.Task.Token
+      Payload:
+        id.$: $.id
+        bucket.$: $.bucket
+        key.$: $.key
+        time.$: $.time
+        region.$: $.region
+        jobid.$: $.jobid
+        tasktoken.$: $$.Task.Token
       FunctionName: ${SendToTextractFunction}
     Retry:
     - ErrorEquals:

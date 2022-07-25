@@ -21,6 +21,9 @@ Globals:
     MemorySize: 256
     Architectures:
       - arm64
+    Environment:
+      Variables:
+        STAGE_NAME: !Ref Environment
 
 
 
@@ -94,7 +97,7 @@ Resources:
   MetaDataTable:
     Type: AWS::Serverless::SimpleTable
     Properties:
-      TableName: !Join ["-", ["serverless_data", !Ref Environment]]
+      TableName: !Join ["-", [!Ref Environment, "TextToSpeechData"]]
 
 #EventBridge
   NotifyFileUploadedRule:
