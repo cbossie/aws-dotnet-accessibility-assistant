@@ -16,7 +16,7 @@ Parameters:
 Globals:
   # Global attributes for each function
   Function:
-    Timeout: 10
+    Timeout: 120
     Runtime: dotnet6
     MemorySize: 256
     Architectures:
