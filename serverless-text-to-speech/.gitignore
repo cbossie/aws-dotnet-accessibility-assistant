@@ -6,7 +6,7 @@
 packaged.yaml
 samconfig.toml
 *.db
-
+.vsdbg/
 ### DotSettings ###
 *.DotSettings
 ### Linux ###
@@ -412,3 +412,4 @@ __pycache__/
 omnisharp.json
 .vscode
 events
+event.json

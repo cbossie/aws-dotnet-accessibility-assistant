@@ -2,14 +2,13 @@ using Amazon.Lambda.Core;
 using Amazon.Lambda.RuntimeSupport;
 using Amazon.Lambda.Serialization.SystemTextJson;
 using Amazon.Textract;
-using Amazon.Textract.Model;
 using Amazon.DynamoDBv2.DataModel;
 using Microsoft.Extensions.DependencyInjection;
 using ServerlessTextToSpeech.Common;
 using ServerlessTextToSpeech.Common.Model;
 using System.Text.Json;
 
-// Boostrap DI
+// Boostrap DI Container
 Bootstrap.ConfigureServices();
 
 

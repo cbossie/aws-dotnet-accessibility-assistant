@@ -29,8 +29,7 @@ States:
         key.$: $.key
         time.$: $.time
         region.$: $.region
-        jobid.$: $.jobid
-        tasktoken.$: $$.Task.Token
+        tasktokenid.$: $$.Task.Token
       FunctionName: ${SendToTextractFunction}
     Retry:
     - ErrorEquals:

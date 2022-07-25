@@ -1,5 +1,4 @@
-﻿using System.Text.Json;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using Amazon.DynamoDBv2.DataModel;
 
 
@@ -28,6 +27,6 @@ public class TextToSpeechModel
     [JsonPropertyName("jobid")]
     public string? TextractJobId { get; set; }
 
-    [JsonPropertyName("tasktoken")]
+    [JsonPropertyName("tasktokenid")]
     public string? TaskToken {get;set;}
 }
