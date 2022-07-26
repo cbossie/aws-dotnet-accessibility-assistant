@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using ServerlessTextToSpeech.Common;
 using ServerlessTextToSpeech.Common.Model;
 using System.Text.Json;
+using Amazon.Textract.Model;
 
 // Boostrap DI Container
 Bootstrap.ConfigureServices();
@@ -18,8 +19,9 @@ var handler = async (TextToSpeechModel inputModel, ILambdaContext context) =>
     //Submit to Textract
     context.Logger.LogInformation(JsonSerializer.Serialize(inputModel));
     var textractCli = Bootstrap.ServiceProvider.GetRequiredService<IAmazonTextract>();
-    var startDocProcessResult = await textractCli.StartDocumentAnalysisAsync(new()
-    { 
+
+    StartDocumentAnalysisRequest req = new ()
+    {
         DocumentLocation = new ()
         {
             S3Object = new ()
@@ -41,7 +43,9 @@ var handler = async (TextToSpeechModel inputModel, ILambdaContext context) =>
         FeatureTypes = new (),
         JobTag = inputModel.Id,
         ClientRequestToken = inputModel.TaskToken
-    });
+    };
+
+    var startDocProcessResult = await textractCli.StartDocumentAnalysisAsync(req);
 
     //Save the data to the DB
     var dynamoDBContext = Bootstrap.ServiceProvider.GetRequiredService<IDynamoDBContext>();
