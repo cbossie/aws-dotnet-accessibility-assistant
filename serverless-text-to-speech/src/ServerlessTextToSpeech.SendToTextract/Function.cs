@@ -2,6 +2,7 @@ using Amazon.Lambda.Core;
 using Amazon.Lambda.RuntimeSupport;
 using Amazon.Lambda.Serialization.SystemTextJson;
 using Amazon.Textract;
+using Amazon.Textract.Model;
 using Amazon.DynamoDBv2.DataModel;
 using Microsoft.Extensions.DependencyInjection;
 using ServerlessTextToSpeech.Common;
@@ -18,11 +19,12 @@ var handler = async (TextToSpeechModel inputModel, ILambdaContext context) =>
     //Submit to Textract
     context.Logger.LogInformation(JsonSerializer.Serialize(inputModel));
     var textractCli = Bootstrap.ServiceProvider.GetRequiredService<IAmazonTextract>();
+
     var startDocProcessResult = await textractCli.StartDocumentAnalysisAsync(new()
-    { 
-        DocumentLocation = new ()
+    {
+        DocumentLocation = new()
         {
-            S3Object = new ()
+            S3Object = new()
             {
                 Bucket = inputModel.BucketName,
                 Name = inputModel.ObjectKey
@@ -38,10 +40,16 @@ var handler = async (TextToSpeechModel inputModel, ILambdaContext context) =>
             SNSTopicArn = Environment.GetEnvironmentVariable("TEXTRACT_TOPIC"),
             RoleArn = Environment.GetEnvironmentVariable("TEXTRACT_ROLE")
         },
-        FeatureTypes = new (),
+        FeatureTypes = new ()
+        {
+            FeatureType.TABLES
+        },
         JobTag = inputModel.Id,
         ClientRequestToken = inputModel.TaskToken
     });
+
+    
+    inputModel.TextractJobId = startDocProcessResult.JobId;
 
     //Save the data to the DB
     var dynamoDBContext = Bootstrap.ServiceProvider.GetRequiredService<IDynamoDBContext>();

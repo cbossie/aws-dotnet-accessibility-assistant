@@ -8,7 +8,8 @@ namespace ServerlessTextToSpeech.Common.Model;
 public class TextToSpeechModel
 {
 
-    [DynamoDBHashKey]
+
+    [DynamoDBHashKey("id")]
     [JsonPropertyName("id")]
     public string? Id { get; set; }
 
