@@ -45,6 +45,35 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonTextractFullAccess
         - S3CrudPolicy:
             BucketName: !Ref SourceBucket
+
+  NotifyTextractComplete:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: NotifyTextractComplete
+      CodeUri: ./src/ServerlessTextToSpeech.CompleteTextract
+      Handler: ServerlessTextToSpeech.CompleteTextract
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !GetAtt MetaDataTable.Arn
+        - SNSCrudPolicy:
+            TopicName: !Ref TextractTopic
+        - Statement:
+          - Sid: StepFunctions
+            Effect: Allow
+            Action:
+            - states:SendTaskSuccess
+            - states:SendTaskFailure
+            - states:SendTaskHeartbeat
+            Resource: '*'
+
+
+      Events:
+        TextractTopicEvent:
+          Type: SNS
+          Properties:
+            Topic: !Ref TextractTopic
+
+
   PublishMetaData:
     Type: AWS::Serverless::Function
     Properties:
