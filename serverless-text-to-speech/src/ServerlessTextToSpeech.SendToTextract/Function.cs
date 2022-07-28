@@ -21,7 +21,7 @@ var handler = async (TextToSpeechModel inputModel, ILambdaContext context) =>
     var dynamoDBContext = Bootstrap.ServiceProvider.GetRequiredService<IDynamoDBContext>();
 
     //Submit to Textract
-    var startDocProcessResult = await textractCli.StartDocumentAnalysisAsync(new()
+    var startDocProcessResult = await textractCli.StartDocumentTextDetectionAsync(new()
     {
         DocumentLocation = new()
         {
@@ -40,10 +40,6 @@ var handler = async (TextToSpeechModel inputModel, ILambdaContext context) =>
         {
             SNSTopicArn = Environment.GetEnvironmentVariable("TEXTRACT_TOPIC"),
             RoleArn = Environment.GetEnvironmentVariable("TEXTRACT_ROLE")
-        },
-        FeatureTypes = new()
-        {
-            FeatureType.TABLES
         },
         JobTag = inputModel.Id
     });

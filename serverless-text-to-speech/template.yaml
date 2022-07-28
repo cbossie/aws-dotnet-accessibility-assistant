@@ -109,6 +109,13 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonPollyFullAccess
         - S3CrudPolicy:
             BucketName: !Ref OutputBucket
+        - arn:aws:iam::aws:policy/AmazonTextractFullAccess
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MetaDataTable
+
+
+
+
 #S3 buckets
   SourceBucket:
     Type: AWS::S3::Bucket

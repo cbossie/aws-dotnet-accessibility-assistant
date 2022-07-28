@@ -10,6 +10,7 @@ using Amazon.Polly;
 using Amazon.Textract;
 using Amazon.StepFunctions;
 using Amazon;
+using ServerlessTextToSpeech.Common.Services;
 
 namespace ServerlessTextToSpeech.Common;
 
@@ -43,6 +44,10 @@ public static class Bootstrap
                 {
                     TableNamePrefix = $"{Environment.GetEnvironmentVariable("STAGE_NAME")}-"
                 }));
+
+        // Utilities and internal classes
+        Services.AddSingleton<ITextToSpeechUtilities, TextToSpeechUtilities>();
+
         ServiceProvider = Services.BuildServiceProvider();
     }
 
