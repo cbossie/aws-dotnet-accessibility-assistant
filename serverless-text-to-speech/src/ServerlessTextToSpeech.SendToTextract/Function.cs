@@ -4,7 +4,7 @@ using Amazon.Lambda.Serialization.SystemTextJson;
 using Amazon.Textract;
 using Amazon.Textract.Model;
 using Amazon.DynamoDBv2.DataModel;
-using Microsoft.Extensions.DependencyInjection;
+
 using ServerlessTextToSpeech.Common;
 using ServerlessTextToSpeech.Common.Model;
 using System.Text.Json;
@@ -16,10 +16,11 @@ Bootstrap.ConfigureServices();
 // The function handler that will be called for each Lambda event
 var handler = async (TextToSpeechModel inputModel, ILambdaContext context) =>
 {
-    //Submit to Textract
-    context.Logger.LogInformation(JsonSerializer.Serialize(inputModel));
+    // Get Required Services
     var textractCli = Bootstrap.ServiceProvider.GetRequiredService<IAmazonTextract>();
+    var dynamoDBContext = Bootstrap.ServiceProvider.GetRequiredService<IDynamoDBContext>();
 
+    //Submit to Textract
     var startDocProcessResult = await textractCli.StartDocumentAnalysisAsync(new()
     {
         DocumentLocation = new()
@@ -30,29 +31,28 @@ var handler = async (TextToSpeechModel inputModel, ILambdaContext context) =>
                 Name = inputModel.ObjectKey
             }
         },
-        OutputConfig = new ()
+        OutputConfig = new()
         {
             S3Bucket = Environment.GetEnvironmentVariable("OUTPUT_BUCKET"),
             S3Prefix = Environment.GetEnvironmentVariable("OUTPUT_PREFIX")
         },
-        NotificationChannel = new ()
+        NotificationChannel = new()
         {
             SNSTopicArn = Environment.GetEnvironmentVariable("TEXTRACT_TOPIC"),
             RoleArn = Environment.GetEnvironmentVariable("TEXTRACT_ROLE")
         },
-        FeatureTypes = new ()
+        FeatureTypes = new()
         {
             FeatureType.TABLES
         },
-        JobTag = inputModel.Id,
-        ClientRequestToken = inputModel.TaskToken
+        JobTag = inputModel.Id
     });
 
-    
+
     inputModel.TextractJobId = startDocProcessResult.JobId;
 
     //Save the data to the DB
-    var dynamoDBContext = Bootstrap.ServiceProvider.GetRequiredService<IDynamoDBContext>();
+
     await dynamoDBContext.SaveAsync(inputModel);
 
     return inputModel;
@@ -60,7 +60,7 @@ var handler = async (TextToSpeechModel inputModel, ILambdaContext context) =>
 
 // Build the Lambda runtime client passing in the handler to call for each
 // event and the JSON serializer to use for translating Lambda JSON documents
-// to .NET types.
+// to .NET types
 await LambdaBootstrapBuilder.Create(handler, new DefaultLambdaJsonSerializer())
         .Build()
         .RunAsync();

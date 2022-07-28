@@ -45,7 +45,12 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonTextractFullAccess
         - S3CrudPolicy:
             BucketName: !Ref SourceBucket
-
+        - S3CrudPolicy:
+            BucketName: !Ref OutputBucket
+        - !Ref DescribeTablePolicy
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MetaDataTable
+        
   NotifyTextractComplete:
     Type: AWS::Serverless::Function
     Properties:
@@ -54,7 +59,7 @@ Resources:
       Handler: ServerlessTextToSpeech.CompleteTextract
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !GetAtt MetaDataTable.Arn
+            TableName: !Ref MetaDataTable
         - SNSCrudPolicy:
             TopicName: !Ref TextractTopic
         - Statement:
@@ -85,7 +90,7 @@ Resources:
           METADATA_TABLE: !Ref MetaDataTable
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !GetAtt  MetaDataTable.Arn
+            TableName: !Ref  MetaDataTable
         - S3CrudPolicy:
             BucketName: !Ref SoundBucket
 
@@ -127,6 +132,19 @@ Resources:
     Type: AWS::Serverless::SimpleTable
     Properties:
       TableName: !Join ["-", [!Ref Environment, "TextToSpeechData"]]
+
+#IAM Policy required for using this table with .NET Object Persistence Model. Crud template does not have "describetable"
+  DescribeTablePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+              Version: 2012-10-17
+              Statement:
+                -
+                  Effect: Allow
+                  Action: dynamodb:DescribeTable
+                  Resource: !GetAtt MetaDataTable.Arn
+
 
 #EventBridge
   NotifyFileUploadedRule:

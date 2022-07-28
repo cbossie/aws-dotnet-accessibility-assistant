@@ -22,4 +22,7 @@
     <PackageReference Include="AWSSDK.Textract" Version="3.7.5.32" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ServerlessTextToSpeech.Common\ServerlessTextToSpeech.Common.csproj" />
+  </ItemGroup>
 </Project>
