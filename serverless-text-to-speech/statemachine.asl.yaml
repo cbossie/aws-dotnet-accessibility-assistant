@@ -45,11 +45,6 @@ States:
       - States.ALL
       Comment: Catch Step Failure
       Next: Publish Fail
-
-
-
-
-
   Publish Fail:
     Type: Task
     Resource: arn:aws:states:::sns:publish
@@ -64,10 +59,14 @@ States:
 
   GetTextBlocks:
     Type: Task
-    Resource: arn:aws:states:::lambda:invoke
+    Resource: arn:aws:states:::lambda:invoke.waitForTaskToken
     OutputPath: "$.Payload"
     Parameters:
-      Payload.$: "$"
+      Payload:
+        id.$: $.id
+        tasktokenid.$: $$.Task.Token
+
+        
       FunctionName: ${ProcessTextFunction}
     Retry:
     - ErrorEquals:
@@ -77,25 +76,15 @@ States:
       IntervalSeconds: 2
       MaxAttempts: 6
       BackoffRate: 2
-    Next: StartSpeechSynthesisTask
+    Next: PublishMetadata
     Catch:
     - ErrorEquals:
       - States.ALL
       Next: Publish Fail
-  StartSpeechSynthesisTask:
-    Type: Task
-    Next: Publish Metadata
-    Parameters:
-      OutputFormat: MyData
-      OutputS3BucketName: MyData
-      Text: MyData
-      VoiceId: MyData
-    Resource: arn:aws:states:::aws-sdk:polly:startSpeechSynthesisTask
-    Catch:
-    - ErrorEquals:
-      - States.ALL
-      Next: Publish Fail
-  Publish Metadata:
+
+
+
+  PublishMetadata:
     Type: Task
     Resource: arn:aws:states:::lambda:invoke
     OutputPath: "$.Payload"

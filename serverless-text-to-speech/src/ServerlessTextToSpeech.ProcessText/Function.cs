@@ -5,6 +5,9 @@ using ServerlessTextToSpeech.Common;
 using ServerlessTextToSpeech.Common.Model;
 using Amazon.Textract;
 using Amazon.Textract.Model;
+using ServerlessTextToSpeech.Common.Services;
+using Amazon.Polly;
+using Amazon.DynamoDBv2.DataModel;
 
 // Boostrap DI Container
 Bootstrap.ConfigureServices();
@@ -13,8 +16,15 @@ Bootstrap.ConfigureServices();
 var handler = async (TextToSpeechModel inputModel, ILambdaContext context) =>
 {
     var textractCli = Bootstrap.ServiceProvider.GetRequiredService<IAmazonTextract>();
+    var pollyCli = Bootstrap.ServiceProvider.GetRequiredService<IAmazonPolly>();
+    var textractUtil = Bootstrap.ServiceProvider.GetRequiredService<ITextToSpeechUtilities>();
+    var dynamoDBContext = Bootstrap.ServiceProvider.GetRequiredService<IDynamoDBContext>();
 
-    //Continuation Token
+    //Get The Model
+    var textToSpeechModel = await dynamoDBContext.LoadAsync<TextToSpeechModel>(inputModel.Id);
+
+
+    //Retrieve the data from Textract
     List<Block> resultBlocks = new List<Block>();
     string? token = null;
 
@@ -34,9 +44,25 @@ var handler = async (TextToSpeechModel inputModel, ILambdaContext context) =>
 
     } while (token is not null);
 
+    // Send to Polly
+    var doc = textractUtil.GetTextDocument(resultBlocks);
 
-    context.Logger.LogInformation("HERE ARE MY RESULTS");
-    context.Logger.LogInformation(JsonSerializer.Serialize(resultBlocks));
+
+    var pollyStartResult = await pollyCli.StartSpeechSynthesisTaskAsync(new()
+    {
+        OutputFormat = OutputFormat.Mp3,
+        OutputS3BucketName = Environment.GetEnvironmentVariable("SOUND_BUCKET"),
+        OutputS3KeyPrefix = Environment.GetEnvironmentVariable("SOUND_PREFIX"),
+        Text = doc.GetDocument(),
+        SnsTopicArn = Environment.GetEnvironmentVariable("POLLY_TOPIC"),
+        VoiceId = VoiceId.FindValue(Environment.GetEnvironmentVariable("POLLY_VOICE"))
+    });
+
+    textToSpeechModel.PollyJobId = pollyStartResult.SynthesisTask.TaskId;
+    textToSpeechModel.PollyTaskToken = inputModel.PollyTaskToken;
+
+    // Save the data out to DynamoDB
+    await dynamoDBContext.SaveAsync(textToSpeechModel);
 };
 
 // Build the Lambda runtime client passing in the handler to call for each

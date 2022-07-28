@@ -13,6 +13,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServerlessTextToSpeech.Publ
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServerlessTextToSpeech.CompleteTextract", "ServerlessTextToSpeech.CompleteTextract\ServerlessTextToSpeech.CompleteTextract.csproj", "{57590ACA-C22F-4772-8078-CE99985091E2}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServerlessTextToSpeech.CompletePolly", "ServerlessTextToSpeech.CompletePolly\ServerlessTextToSpeech.CompletePolly.csproj", "{57AF2BB2-83BE-4651-A794-1F025A6959B9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{57590ACA-C22F-4772-8078-CE99985091E2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{57590ACA-C22F-4772-8078-CE99985091E2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{57590ACA-C22F-4772-8078-CE99985091E2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{57AF2BB2-83BE-4651-A794-1F025A6959B9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{57AF2BB2-83BE-4651-A794-1F025A6959B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{57AF2BB2-83BE-4651-A794-1F025A6959B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{57AF2BB2-83BE-4651-A794-1F025A6959B9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

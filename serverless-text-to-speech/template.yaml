@@ -11,7 +11,17 @@ Parameters:
       - dev
       - test
       - prod
-
+  OutputPrefix:
+    Type: String
+    Default: output
+    MinLength: '1'
+  SoundPrefix:
+    Type: String
+    Default: sound
+    MinLength: '1'
+  Voice:
+    Type: String
+    Default: Kevin
 
 Globals:
   # Global attributes for each function
@@ -28,7 +38,7 @@ Globals:
 
 
 Resources:
-#Functions
+#Functions Used for AI / ML
   SendToTextract:
     Type: AWS::Serverless::Function
     Properties:
@@ -40,7 +50,7 @@ Resources:
           TEXTRACT_ROLE: !GetAtt TextractRole.Arn
           TEXTRACT_TOPIC: !Ref TextractTopic
           OUTPUT_BUCKET: !Ref OutputBucket
-          OUTPUT_PREFIX: output
+          OUTPUT_PREFIX: !Ref OutputPrefix
       Policies:
         - arn:aws:iam::aws:policy/AmazonTextractFullAccess
         - S3CrudPolicy:
@@ -50,7 +60,34 @@ Resources:
         - !Ref DescribeTablePolicy
         - DynamoDBCrudPolicy:
             TableName: !Ref MetaDataTable
-        
+
+  ProcessTextAndSendToPolly:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: ProcessTextAndSendToPolly
+      CodeUri: ./src/ServerlessTextToSpeech.ProcessText
+      Handler: ServerlessTextToSpeech.ProcessText
+      Environment:
+        Variables:
+          SOUND_BUCKET: !Ref SoundBucket
+          SOUND_PREFIX: !Ref SoundPrefix
+          POLLY_ROLE: !GetAtt PollyTole.Arn
+          POLLY_TOPIC: !Ref PollyTopic
+          POLLY_VOICE: !Ref Voice
+      Policies:
+        - arn:aws:iam::aws:policy/AmazonPollyFullAccess
+        - S3CrudPolicy:
+            BucketName: !Ref OutputBucket
+        - arn:aws:iam::aws:policy/AmazonTextractFullAccess
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MetaDataTable
+        - !Ref DescribeTablePolicy
+
+
+
+
+
+#Callback Function for Textract Job
   NotifyTextractComplete:
     Type: AWS::Serverless::Function
     Properties:
@@ -70,14 +107,38 @@ Resources:
             - states:SendTaskFailure
             - states:SendTaskHeartbeat
             Resource: '*'
-
-
       Events:
         TextractTopicEvent:
           Type: SNS
           Properties:
             Topic: !Ref TextractTopic
 
+
+#Callback Function for Polly Job
+  NotifyPollyComplete:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: NotifyPollyComplete
+      CodeUri: ./src/ServerlessTextToSpeech.CompletePolly
+      Handler: ServerlessTextToSpeech.CompletePolly
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MetaDataTable
+        - SNSCrudPolicy:
+            TopicName: !Ref PollyTopic
+        - Statement:
+          - Sid: StepFunctions
+            Effect: Allow
+            Action:
+            - states:SendTaskSuccess
+            - states:SendTaskFailure
+            - states:SendTaskHeartbeat
+            Resource: '*'
+      Events:
+        PollyTopicEvent:
+          Type: SNS
+          Properties:
+            Topic: !Ref PollyTopic
 
   PublishMetaData:
     Type: AWS::Serverless::Function
@@ -95,23 +156,14 @@ Resources:
             BucketName: !Ref SoundBucket
 
 
-  ProcessText:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: ProcessText
-      CodeUri: ./src/ServerlessTextToSpeech.ProcessText
-      Handler: ServerlessTextToSpeech.ProcessText
-      Environment:
-        Variables:
-          INPUT_BUCKET: !Ref SourceBucket
-          OUTPUT_BUCKET: !Ref OutputBucket
-      Policies:
-        - arn:aws:iam::aws:policy/AmazonPollyFullAccess
-        - S3CrudPolicy:
-            BucketName: !Ref OutputBucket
-        - arn:aws:iam::aws:policy/AmazonTextractFullAccess
-        - DynamoDBCrudPolicy:
-            TableName: !Ref MetaDataTable
+
+
+
+
+
+
+
+
 
 
 
@@ -124,8 +176,6 @@ Resources:
       NotificationConfiguration:
         EventBridgeConfiguration:
           EventBridgeEnabled: true
-
-
   OutputBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -140,17 +190,8 @@ Resources:
     Properties:
       TableName: !Join ["-", [!Ref Environment, "TextToSpeechData"]]
 
-#IAM Policy required for using this table with .NET Object Persistence Model. Crud template does not have "describetable"
-  DescribeTablePolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      PolicyDocument:
-              Version: 2012-10-17
-              Statement:
-                -
-                  Effect: Allow
-                  Action: dynamodb:DescribeTable
-                  Resource: !GetAtt MetaDataTable.Arn
+
+
 
 
 #EventBridge
@@ -173,6 +214,27 @@ Resources:
             !GetAtt ProcessStateMachine.Arn
           RoleArn: !GetAtt StateMachineEventRole.Arn
           Id: stepFunctionExecution
+
+#Step Functions
+  ProcessStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Name: "TextToSpeechStateMachine"
+      Type: STANDARD
+      DefinitionUri: ./statemachine.asl.yaml
+      DefinitionSubstitutions:
+        TextractOutputBucket: !Ref OutputBucket
+        SendToTextractFunction: !GetAtt   SendToTextract.Arn
+        PublishMetadataFunction: !GetAtt PublishMetaData.Arn
+        ProcessTextFunction: !GetAtt ProcessTextAndSendToPolly.Arn
+        SuccessTopic: !Ref SuccessTopic
+        FailureTopic: !Ref FailureTopic
+        MetadataTable: !GetAtt MetaDataTable.Arn
+        TextractTopic: !Ref TextractTopic
+        TextractRole: !GetAtt TextractRole.Arn
+      Role: !GetAtt StateMachineRole.Arn
+
+#Roles and Policies (IAM)
   StateMachineEventRole:
       Type: AWS::IAM::Role
       Properties:
@@ -197,8 +259,20 @@ Resources:
                   Action: states:StartExecution
                   Resource: !GetAtt ProcessStateMachine.Arn
 
-
-#Step Function and related data
+#IAM Policy required for using this table with .NET Object Persistence Model. Crud template does not have "describetable"
+  DescribeTablePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Join ["-", ["DescribeTablePolicy", !Ref Environment]]
+      PolicyDocument:
+              Version: 2012-10-17
+              Statement:
+                -
+                  Effect: Allow
+                  Action: dynamodb:DescribeTable
+                  Resource: !GetAtt MetaDataTable.Arn
+  
+  #Role used for the step function
   StateMachineRole:
     Type: AWS::IAM::Role
     Properties:
@@ -240,30 +314,15 @@ Resources:
               Resource:
                 - !GetAtt SendToTextract.Arn
                 - !GetAtt PublishMetaData.Arn
-                - !GetAtt ProcessText.Arn
+                - !GetAtt ProcessTextAndSendToPolly.Arn
             - Sid: GetSourceData
               Effect: Allow
               Action: s3:Get*
               Resource: !Join ["/", [!GetAtt SourceBucket.Arn, "*" ]]
           PolicyName: LambdaExecution
-  ProcessStateMachine:
-    Type: AWS::Serverless::StateMachine
-    Properties:
-      Name: "TextToSpeechStateMachine"
-      Type: STANDARD
-      DefinitionUri: ./statemachine.asl.yaml
-      DefinitionSubstitutions:
-        TextractOutputBucket: !Ref OutputBucket
-        SendToTextractFunction: !GetAtt   SendToTextract.Arn
-        PublishMetadataFunction: !GetAtt PublishMetaData.Arn
-        ProcessTextFunction: !GetAtt ProcessText.Arn
-        SuccessTopic: !Ref SuccessTopic
-        FailureTopic: !Ref FailureTopic
-        MetadataTable: !GetAtt MetaDataTable.Arn
-        TextractTopic: !Ref TextractTopic
-        TextractRole: !GetAtt TextractRole.Arn
-      Role: !GetAtt StateMachineRole.Arn
 
+
+  #Role used for Textract
   TextractRole:
     Type: AWS::IAM::Role
     Properties:
@@ -296,22 +355,57 @@ Resources:
               Action: s3:PutObject
               Resource: !Join ["/", [!GetAtt OutputBucket.Arn, "*" ]]
           PolicyName: TextractRole
+
+  #Role used for Polly
+  PollyRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join ["-", ["textract-role", !Ref Environment]]
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - polly.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Sid: PublishSns
+              Effect: Allow
+              Action:
+              - sns:Publish
+              Resource:
+                - !Ref PollyTopic
+            - Sid: WriteDestinationData
+              Effect: Allow
+              Action: s3:PutObject
+              Resource: !Join ["/", [!GetAtt OutputBucket.Arn, "*" ] ]
+          PolicyName: PollyRole
+
 #SNS Topics
   TextractTopic:
     Type: AWS::SNS::Topic
     Properties:
-      DisplayName: TextractTopic
+      DisplayName: !Join ["-", ["TextractTopic", !Ref Environment] ]
       TopicName: !Join ["-", ["TextractNotify", !Ref Environment] ]
+  PollyTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: !Join ["-", ["PollyTopic", !Ref Environment] ]
+      TopicName: !Join ["-", ["PollyNotify", !Ref Environment] ]
   SuccessTopic:
     Type: AWS::SNS::Topic
     Properties:
-      DisplayName: TextToSpeechSuccessTopic
+      DisplayName: !Join ["-", ["TextToSpeechSuccess", !Ref Environment] ]
       TopicName: !Join ["-", ["TextToSpeechSuccess", !Ref Environment] ]
-
   FailureTopic:
     Type: AWS::SNS::Topic
     Properties:
-      DisplayName: TextToSpeechFailureTopic
+      DisplayName: !Join ["-", ["TextToSpeechFailure", !Ref Environment] ]
       TopicName: !Join ["-", ["TextToSpeechFailure", !Ref Environment] ]
 
 

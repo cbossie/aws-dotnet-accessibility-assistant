@@ -30,4 +30,14 @@ public class TextToSpeechModel
 
     [JsonPropertyName("tasktokenid")]
     public string? TaskToken {get;set;}
+
+    [JsonPropertyName("pollyjobid")]
+    public string? PollyJobId { get; set; }
+
+    [JsonPropertyName("pollytasktokenid")]
+    public string? PollyTaskToken { get; set; }
+
+    [JsonPropertyName("pollytasktokenid")]
+    public string? PollyOutputUri { get; set; }
+
 }
