@@ -60,7 +60,8 @@ var handler = async (TextToSpeechModel inputModel, ILambdaContext context) =>
 
     textToSpeechModel.PollyJobId = pollyStartResult.SynthesisTask.TaskId;
     textToSpeechModel.PollyOutputUri = pollyStartResult.SynthesisTask.OutputUri;
-
+    textToSpeechModel.SoundBucket = Environment.GetEnvironmentVariable("SOUND_BUCKET");
+ 
     // Save the data out to DynamoDB
     await dynamoDBContext.SaveAsync(textToSpeechModel);
 };

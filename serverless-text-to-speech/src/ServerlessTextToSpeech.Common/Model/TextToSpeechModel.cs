@@ -39,4 +39,10 @@ public class TextToSpeechModel
 
     [JsonPropertyName("pollyoutputuri")]
     public string? PollyOutputUri { get; set; }
+
+    [JsonPropertyName("soundbucket")]
+    public string? SoundBucket { get; set; }
+
+    [JsonPropertyName("soundkey")]
+    public string? SoundKey { get; set; }
 }

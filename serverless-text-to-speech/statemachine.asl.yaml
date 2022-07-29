@@ -2,26 +2,20 @@ Comment: State Machine used for text to speech workflow
 Version: '1.0'
 StartAt: MapInput
 States:
-
   MapInput:
     Type: Pass
     Next: SendToTextract
     Parameters:
-      id.$: "$.id"
-      bucket.$: "$.detail.bucket.name"
-      key.$: "$.detail.object.key"
-      time.$: "$.time"
-      region.$: "$.region"
-    ResultPath: "$"
-  
-  
-  
-  
-  
+      id.$: $.id
+      bucket.$: $.detail.bucket.name
+      key.$: $.detail.object.key
+      time.$: $.time
+      region.$: $.region
+    ResultPath: $
   SendToTextract:
     Type: Task
-    Resource: arn:aws:states:::lambda:invoke.waitForTaskToken
-    OutputPath: "$.Payload"
+    Resource: 'arn:aws:states:::lambda:invoke.waitForTaskToken'
+    OutputPath: $.Payload
     Parameters:
       Payload:
         id.$: $.id
@@ -30,103 +24,82 @@ States:
         time.$: $.time
         region.$: $.region
         tasktokenid.$: $$.Task.Token
-      FunctionName: ${SendToTextractFunction}
+      FunctionName: '${SendToTextractFunction}'
     Retry:
-    - ErrorEquals:
-      - Lambda.ServiceException
-      - Lambda.AWSLambdaException
-      - Lambda.SdkClientException
-      IntervalSeconds: 2
-      MaxAttempts: 6
-      BackoffRate: 2
+      - ErrorEquals:
+          - Lambda.ServiceException
+          - Lambda.AWSLambdaException
+          - Lambda.SdkClientException
+        IntervalSeconds: 2
+        MaxAttempts: 6
+        BackoffRate: 2
     Next: GetTextBlocks
     Catch:
-    - ErrorEquals:
-      - States.ALL
-      Comment: Catch Step Failure
-      Next: Publish Fail
-  Publish Fail:
+      - ErrorEquals:
+          - States.ALL
+        Comment: Catch Step Failure
+        Next: PublishFail
+  PublishFail:
     Type: Task
-    Resource: arn:aws:states:::sns:publish
+    Resource: 'arn:aws:states:::sns:publish'
     Parameters:
-      Message.$: "$"
-      TopicArn: ${FailureTopic}
+      Message.$: $
+      TopicArn: '${FailureTopic}'
     Next: Fail
   Fail:
     Type: Fail
-
-
-
   GetTextBlocks:
     Type: Task
-    Resource: arn:aws:states:::lambda:invoke.waitForTaskToken
-    OutputPath: "$.Payload"
+    Resource: 'arn:aws:states:::lambda:invoke.waitForTaskToken'
+    OutputPath: $.Payload
     Parameters:
       Payload:
         id.$: $.id
         pollytasktokenid.$: $$.Task.Token
-
-        
-      FunctionName: ${ProcessTextFunction}
+      FunctionName: '${ProcessTextFunction}'
     Retry:
-    - ErrorEquals:
-      - Lambda.ServiceException
-      - Lambda.AWSLambdaException
-      - Lambda.SdkClientException
-      IntervalSeconds: 2
-      MaxAttempts: 6
-      BackoffRate: 2
+      - ErrorEquals:
+          - Lambda.ServiceException
+          - Lambda.AWSLambdaException
+          - Lambda.SdkClientException
+        IntervalSeconds: 2
+        MaxAttempts: 6
+        BackoffRate: 2
     Next: PublishMetadata
     Catch:
-    - ErrorEquals:
-      - States.ALL
-      Next: Publish Fail
-
-
-
+      - ErrorEquals:
+          - States.ALL
+        Next: PublishFail
   PublishMetadata:
     Type: Task
-    Resource: arn:aws:states:::lambda:invoke
-    OutputPath: "$.Payload"
+    Resource: 'arn:aws:states:::lambda:invoke'
+    OutputPath: $.Payload
     Parameters:
-      Payload.$: "$"
-      FunctionName: ${PublishMetadataFunction}
+      Payload.$: $
+      FunctionName: '${PublishMetadataFunction}'
     Retry:
-    - ErrorEquals:
-      - Lambda.ServiceException
-      - Lambda.AWSLambdaException
-      - Lambda.SdkClientException
-      IntervalSeconds: 2
-      MaxAttempts: 6
-      BackoffRate: 2
-    Next: Output Metadata
+      - ErrorEquals:
+          - Lambda.ServiceException
+          - Lambda.AWSLambdaException
+          - Lambda.SdkClientException
+        IntervalSeconds: 2
+        MaxAttempts: 6
+        BackoffRate: 2
+    Next: PublishSuccess
     Catch:
-    - ErrorEquals:
-      - States.ALL
-      Next: Publish Fail
-  Output Metadata:
+      - ErrorEquals:
+          - States.ALL
+        Next: PublishFail
+  PublishSuccess:
     Type: Task
-    Resource: arn:aws:states:::dynamodb:putItem
+    Resource: 'arn:aws:states:::sns:publish'
     Parameters:
-      TableName: MyDynamoDBTable
-      Item:
-        Column:
-          S: MyEntry
-    Next: Publish Success
-    Catch:
-    - ErrorEquals:
-      - States.ALL
-      Next: Publish Fail
-  Publish Success:
-    Type: Task
-    Resource: arn:aws:states:::sns:publish
-    Parameters:
-      Message.$: "$"
-      TopicArn: ${SuccessTopic}
+      Message.$: $
+      TopicArn: '${SuccessTopic}'
     Next: Success
     Catch:
-    - ErrorEquals:
-      - States.ALL
-      Next: Publish Fail
+      - ErrorEquals:
+          - States.ALL
+        Next: PublishFail
   Success:
     Type: Succeed
