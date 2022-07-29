@@ -8,7 +8,7 @@ using ServerlessTextToSpeech.Common;
 using ServerlessTextToSpeech.Common.Model;
 
 
-// Boostrap DI Container
+// Bootstrap DI Container.
 Bootstrap.ConfigureServices();
 
 // The function handler that will be called for each Lambda event

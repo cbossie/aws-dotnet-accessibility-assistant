@@ -8,8 +8,9 @@ using Amazon.Textract.Model;
 using ServerlessTextToSpeech.Common.Services;
 using Amazon.Polly;
 using Amazon.DynamoDBv2.DataModel;
+using Amazon.Polly.Model;
 
-// Boostrap DI Container
+// Bootstrap DI Container.
 Bootstrap.ConfigureServices();
 
 // The function handler that will be called for each Lambda event
@@ -22,31 +23,30 @@ var handler = async (TextToSpeechModel inputModel, ILambdaContext context) =>
 
     //Get The Model
     var textToSpeechModel = await dynamoDBContext.LoadAsync<TextToSpeechModel>(inputModel.Id);
-
+    textToSpeechModel.PollyTaskToken = inputModel.PollyTaskToken;
 
     //Retrieve the data from Textract
     List<Block> resultBlocks = new List<Block>();
-    string? token = null;
 
+    context.Logger.LogInformation($"job = {textToSpeechModel.TextractJobId}");
+
+    string? token = null;
     do
     {
         var data = await textractCli.GetDocumentTextDetectionAsync(new()
         {
-            JobId = inputModel.TextractJobId,
+            JobId = textToSpeechModel.TextractJobId,
             MaxResults = 1000,
             NextToken = token
-
         });
-
         token = data.NextToken;
         resultBlocks.AddRange(data.Blocks);
-
-
     } while (token is not null);
 
     // Send to Polly
-    var doc = textractUtil.GetTextDocument(resultBlocks);
+    context.Logger.LogInformation("Done Retrieving Textract. Sending to Polly");
 
+    var doc = textractUtil.GetTextDocument(resultBlocks);
 
     var pollyStartResult = await pollyCli.StartSpeechSynthesisTaskAsync(new()
     {
@@ -59,7 +59,7 @@ var handler = async (TextToSpeechModel inputModel, ILambdaContext context) =>
     });
 
     textToSpeechModel.PollyJobId = pollyStartResult.SynthesisTask.TaskId;
-    textToSpeechModel.PollyTaskToken = inputModel.PollyTaskToken;
+    textToSpeechModel.PollyOutputUri = pollyStartResult.SynthesisTask.OutputUri;
 
     // Save the data out to DynamoDB
     await dynamoDBContext.SaveAsync(textToSpeechModel);

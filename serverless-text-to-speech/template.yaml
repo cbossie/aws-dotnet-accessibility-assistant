@@ -21,7 +21,7 @@ Parameters:
     MinLength: '1'
   Voice:
     Type: String
-    Default: Kevin
+    Default: Matthew
 
 Globals:
   # Global attributes for each function
@@ -71,18 +71,22 @@ Resources:
         Variables:
           SOUND_BUCKET: !Ref SoundBucket
           SOUND_PREFIX: !Ref SoundPrefix
-          POLLY_ROLE: !GetAtt PollyTole.Arn
           POLLY_TOPIC: !Ref PollyTopic
           POLLY_VOICE: !Ref Voice
       Policies:
         - arn:aws:iam::aws:policy/AmazonPollyFullAccess
         - S3CrudPolicy:
-            BucketName: !Ref OutputBucket
+            BucketName: !Ref SoundBucket
         - arn:aws:iam::aws:policy/AmazonTextractFullAccess
         - DynamoDBCrudPolicy:
             TableName: !Ref MetaDataTable
         - !Ref DescribeTablePolicy
-
+        - SNSCrudPolicy:
+            TopicName: !Ref PollyTopic
+        - S3CrudPolicy:
+            BucketName: !Ref OutputBucket
+## TODO - Need to update this and remove
+        - arn:aws:iam::aws:policy/AmazonSNSFullAccess
 
 
 
@@ -184,6 +188,11 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Join [ "-", ["serverless-sound-files", !Ref Environment]]
+
+
+
+
+
 #Database
   MetaDataTable:
     Type: AWS::Serverless::SimpleTable
@@ -357,34 +366,34 @@ Resources:
           PolicyName: TextractRole
 
   #Role used for Polly
-  PollyRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: !Join ["-", ["textract-role", !Ref Environment]]
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - polly.amazonaws.com
-            Action:
-              - 'sts:AssumeRole'
-      Policies:
-        - PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-            - Sid: PublishSns
-              Effect: Allow
-              Action:
-              - sns:Publish
-              Resource:
-                - !Ref PollyTopic
-            - Sid: WriteDestinationData
-              Effect: Allow
-              Action: s3:PutObject
-              Resource: !Join ["/", [!GetAtt OutputBucket.Arn, "*" ] ]
-          PolicyName: PollyRole
+  # PollyRole:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     RoleName: !Join ["-", ["polly-role", !Ref Environment]]
+  #     AssumeRolePolicyDocument:
+  #       Version: '2012-10-17'
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             Service:
+  #               - polly.amazonaws.com
+  #           Action:
+  #             - 'sts:AssumeRole'
+  #     Policies:
+  #       - PolicyDocument:
+  #           Version: '2012-10-17'
+  #           Statement:
+  #           - Sid: PublishSns
+  #             Effect: Allow
+  #             Action:
+  #             - sns:Publish
+  #             Resource:
+  #               - !Ref PollyTopic
+  #           - Sid: WriteDestinationData
+  #             Effect: Allow
+  #             Action: s3:PutObject
+  #             Resource: !Join ["/", [!GetAtt OutputBucket.Arn, "*" ] ]
+  #         PolicyName: PollyRole
 
 #SNS Topics
   TextractTopic:

@@ -9,7 +9,7 @@ using ServerlessTextToSpeech.Common;
 using ServerlessTextToSpeech.Common.Model;
 using System.Text.Json;
 
-// Boostrap DI Container
+// Bootstrap DI Container.
 Bootstrap.ConfigureServices();
 
 

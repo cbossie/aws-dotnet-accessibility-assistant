@@ -8,12 +8,14 @@ using Amazon.StepFunctions;
 using ServerlessTextToSpeech.Common;
 using ServerlessTextToSpeech.Common.Model;
 
-// Boostrap DI Container
+// Bootstrap DI Container.
 Bootstrap.ConfigureServices();
 
 // The function handler that will be called for each Lambda event
 var handler = async (SNSEvent snsEvent, ILambdaContext context) =>
 {
+    context.Logger.LogInformation(JsonSerializer.Serialize(snsEvent));
+
     var dynamoDBContext = Bootstrap.ServiceProvider.GetRequiredService<IDynamoDBContext>();
     var stepFunctionsCli = Bootstrap.ServiceProvider.GetRequiredService<IAmazonStepFunctions>();
     try
@@ -23,7 +25,7 @@ var handler = async (SNSEvent snsEvent, ILambdaContext context) =>
         // Get the Model for the DynamoDB representation of our job
         var scanData = dynamoDBContext.ScanAsync<TextToSpeechModel>(new List<ScanCondition>
         { 
-            new ("pollyjobid", ScanOperator.Equal, model.TaskId)
+            new (nameof(TextToSpeechModel.PollyJobId), ScanOperator.Equal, model.TaskId)
         });
 
         var textToSpeechModel = (await scanData.GetNextSetAsync()).FirstOrDefault();
@@ -32,7 +34,7 @@ var handler = async (SNSEvent snsEvent, ILambdaContext context) =>
             throw new Exception($"Task not found");
         }
 
-        if ( model.TaskStatus != "completed")
+        if ( model.TaskStatus != "COMPLETED")
         {
             context.Logger.LogInformation("Sending Failure");
             await stepFunctionsCli.SendTaskFailureAsync(new()
@@ -41,16 +43,10 @@ var handler = async (SNSEvent snsEvent, ILambdaContext context) =>
             });
         }
 
-        context.Logger.LogInformation(JsonSerializer.Serialize(textToSpeechModel));
-
-
         // Success. Start up the function again
         context.Logger.LogInformation("Sending Success");
-
         var jobDataDynamic = new { Payload = textToSpeechModel };
         string jobDataSerialized = JsonSerializer.Serialize(jobDataDynamic);
-        context.Logger.LogInformation("JobData:");
-        context.Logger.LogInformation(jobDataSerialized);
         await stepFunctionsCli.SendTaskSuccessAsync(new()
         {
             TaskToken = textToSpeechModel.PollyTaskToken,
