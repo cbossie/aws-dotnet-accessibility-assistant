@@ -40,7 +40,7 @@ Resources:
   SendToTextract:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: SendToTextract
+      FunctionName: !Join ['-', ['SendToTextract', !Ref Environment]]
       CodeUri: ./src/ServerlessTextToSpeech.SendToTextract
       Handler: ServerlessTextToSpeech.SendToTextract
       Environment:
@@ -62,7 +62,7 @@ Resources:
   ProcessTextAndSendToPolly:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: ProcessTextAndSendToPolly
+      FunctionName: !Join ['-', ['ProcessTextAndSendToPolly', !Ref Environment]]
       CodeUri: ./src/ServerlessTextToSpeech.ProcessText
       Handler: ServerlessTextToSpeech.ProcessText
       Environment:
@@ -90,7 +90,7 @@ Resources:
   NotifyTextractComplete:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: NotifyTextractComplete
+      FunctionName: !Join ['-', ['NotifyTextractComplete', !Ref Environment]]
       CodeUri: ./src/ServerlessTextToSpeech.CompleteTextract
       Handler: ServerlessTextToSpeech.CompleteTextract
       Policies:
@@ -116,7 +116,7 @@ Resources:
   NotifyPollyComplete:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: NotifyPollyComplete
+      FunctionName: !Join ['-', ['NotifyPollyComplete', !Ref Environment]]
       CodeUri: ./src/ServerlessTextToSpeech.CompletePolly
       Handler: ServerlessTextToSpeech.CompletePolly
       Policies:
@@ -141,7 +141,7 @@ Resources:
   PublishMetaData:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: PublishMetaData
+      FunctionName: !Join ['-', ['PublishMetaData', !Ref Environment]]
       CodeUri: ./src/ServerlessTextToSpeech.PublishMetaData
       Handler: ServerlessTextToSpeech.PublishMetaData
       Policies:
@@ -151,6 +151,27 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref MetaDataTable
 
+
+  # Url to get the sound file
+  SoundFileFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Join ['-', ['SoundFileUrl', !Ref Environment]]
+      CodeUri: ./src/ServerlessTextToSpeech.SoundFileUrl
+      Handler: ServerlessTextToSpeech.SoundFileUrl
+      FunctionUrlConfig:
+        AuthType: NONE
+      Environment:
+        Variables:
+          URL_EXPIRATION: 30
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref SoundBucket
+        - !Ref DescribeTablePolicy
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MetaDataTable
+ 
+ 
   #S3 buckets
   SourceBucket:
     Type: AWS::S3::Bucket
@@ -349,3 +370,12 @@ Resources:
     Properties:
       DisplayName: !Join ["-", ["TextToSpeechFailure", !Ref Environment]]
       TopicName: !Join ["-", ["TextToSpeechFailure", !Ref Environment]]
+
+
+Outputs:
+  SoundFileFunctionUrl:
+      Description: "Sound Function URL Endpoint"
+      Value:
+        Fn::GetAtt: SoundFileFunctionUrl.FunctionUrl
+
+

@@ -12,5 +12,4 @@ public interface ITextToSpeechUtilities
 {
     TextDocument GetTextDocument(List<Block> blocks);
 
-
 }

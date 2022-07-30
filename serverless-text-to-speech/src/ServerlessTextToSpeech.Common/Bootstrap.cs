@@ -11,6 +11,7 @@ using Amazon.Textract;
 using Amazon.StepFunctions;
 using Amazon;
 using ServerlessTextToSpeech.Common.Services;
+using Amazon.S3;
 
 namespace ServerlessTextToSpeech.Common;
 
@@ -35,6 +36,7 @@ public static class Bootstrap
         Services.AddAWSService<IAmazonPolly>();
         Services.AddAWSService<IAmazonTextract>();
         Services.AddAWSService<IAmazonStepFunctions>();
+        Services.AddAWSService<IAmazonS3>();
 
         // DynamoDB and object model
         Services.AddAWSService<IAmazonDynamoDB>();
