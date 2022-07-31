@@ -153,24 +153,24 @@ Resources:
 
 
   # Url to get the sound file
-  SoundFileFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Join ['-', ['SoundFileUrl', !Ref Environment]]
-      CodeUri: ./src/ServerlessTextToSpeech.SoundFileUrl
-      Handler: ServerlessTextToSpeech.SoundFileUrl
-      FunctionUrlConfig:
-        AuthType: NONE
-      Environment:
-        Variables:
-          URL_EXPIRATION: 30
-      Policies:
-        - S3CrudPolicy:
-            BucketName: !Ref SoundBucket
-        - !Ref DescribeTablePolicy
-        - DynamoDBCrudPolicy:
-            TableName: !Ref MetaDataTable
-        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+  # SoundFileFunction:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     FunctionName: !Join ['-', ['SoundFileUrl', !Ref Environment]]
+  #     CodeUri: ./src/ServerlessTextToSpeech.SoundFileUrl
+  #     Handler: ServerlessTextToSpeech.SoundFileUrl
+  #     FunctionUrlConfig:
+  #       AuthType: NONE
+  #     Environment:
+  #       Variables:
+  #         URL_EXPIRATION: 30
+  #     Policies:
+  #       - S3CrudPolicy:
+  #           BucketName: !Ref SoundBucket
+  #       - !Ref DescribeTablePolicy
+  #       - DynamoDBCrudPolicy:
+  #           TableName: !Ref MetaDataTable
+  #       - arn:aws:iam::aws:policy/AmazonS3FullAccess
  
  
   #S3 buckets
@@ -373,10 +373,10 @@ Resources:
       TopicName: !Join ["-", ["TextToSpeechFailure", !Ref Environment]]
 
 
-Outputs:
-  SoundFileFunctionUrl:
-      Description: "Sound Function URL Endpoint"
-      Value:
-        Fn::GetAtt: SoundFileFunctionUrl.FunctionUrl
+# Outputs:
+#   SoundFileFunctionUrl:
+#       Description: "Sound Function URL Endpoint"
+#       Value:
+#         Fn::GetAtt: SoundFileFunctionUrl.FunctionUrl
 
 
