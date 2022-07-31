@@ -33,6 +33,8 @@ var handler = async (APIGatewayProxyRequest request, ILambdaContext context) =>
         context.Logger.LogInformation($"ID = {id}");
         var data = await dynamoDBContext.LoadAsync<TextToSpeechModel>(id);
 
+        context.Logger.LogInformation(JsonSerializer.Serialize(data));
+
         if (data is null)
         {
             statusCode = 404;
@@ -41,11 +43,11 @@ var handler = async (APIGatewayProxyRequest request, ILambdaContext context) =>
         {
             var url = s3Client.GetPreSignedURL(new()
             {
-                BucketName = data.BucketName,
-                Key = data.ObjectKey,
+                BucketName = data.SoundBucket,
+                Key = data.SoundKey,
                 Expires = DateTime.Now.AddSeconds(expirationSecond)
             });
-            headers.Add("Location", url);
+            headers.Add("Location",     url);
             headers.Add("Content-Encoding", "audio/mpeg");
         }
     }

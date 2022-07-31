@@ -1,4 +1,4 @@
-using Amazon.Lambda.Core;
+    using Amazon.Lambda.Core;
 using Amazon.Lambda.RuntimeSupport;
 using Amazon.Lambda.Serialization.SystemTextJson;
 using ServerlessTextToSpeech.Common;

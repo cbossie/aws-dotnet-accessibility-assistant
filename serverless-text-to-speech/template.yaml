@@ -170,6 +170,7 @@ Resources:
         - !Ref DescribeTablePolicy
         - DynamoDBCrudPolicy:
             TableName: !Ref MetaDataTable
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
  
  
   #S3 buckets
