@@ -1,4 +1,4 @@
-    using Amazon.Lambda.Core;
+using Amazon.Lambda.Core;
 using Amazon.Lambda.RuntimeSupport;
 using Amazon.Lambda.Serialization.SystemTextJson;
 using ServerlessTextToSpeech.Common;
@@ -8,7 +8,6 @@ using Amazon.Textract.Model;
 using ServerlessTextToSpeech.Common.Services;
 using Amazon.Polly;
 using Amazon.DynamoDBv2.DataModel;
-using Amazon.Polly.Model;
 
 // Bootstrap DI Container.
 Bootstrap.ConfigureServices();
@@ -27,9 +26,6 @@ var handler = async (TextToSpeechModel inputModel, ILambdaContext context) =>
 
     //Retrieve the data from Textract
     List<Block> resultBlocks = new List<Block>();
-
-    context.Logger.LogInformation($"job = {textToSpeechModel.TextractJobId}");
-
     string? token = null;
     do
     {

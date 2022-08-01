@@ -13,8 +13,6 @@ Bootstrap.ConfigureServices();
 // The function handler that will be called for each Lambda event
 var handler = async (APIGatewayProxyRequest request, ILambdaContext context) =>
 {
-    context.Logger.LogInformation("Starting");
-    context.Logger.LogInformation(JsonSerializer.Serialize(request));
     var s3Client = Bootstrap.ServiceProvider.GetRequiredService<IAmazonS3>();
     var dynamoDBContext = Bootstrap.ServiceProvider.GetRequiredService<IDynamoDBContext>();
     int expirationSecond;
@@ -30,11 +28,7 @@ var handler = async (APIGatewayProxyRequest request, ILambdaContext context) =>
     try
     {
         string id = request.PathParameters["id"];
-        context.Logger.LogInformation($"ID = {id}");
         var data = await dynamoDBContext.LoadAsync<TextToSpeechModel>(id);
-
-        context.Logger.LogInformation(JsonSerializer.Serialize(data));
-
         if (data is null)
         {
             statusCode = 404;

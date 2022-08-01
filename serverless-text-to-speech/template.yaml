@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Sample SAM Template for aws-dotnet-textract
+  Serverless Text to Speech Workflow
 
 Parameters:
   Environment:
@@ -19,7 +19,7 @@ Parameters:
     Type: String
     Default: sounds/
     MinLength: "1"
-  Voice:
+  PollyVoice:
     Type: String
     Default: Matthew
   S3IdKey:
@@ -67,14 +67,14 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Join ['-', ['ProcessTextAndSendToPolly', !Ref Environment]]
-      CodeUri: ./src/ServerlessTextToSpeech.ProcessText
-      Handler: ServerlessTextToSpeech.ProcessText
+      CodeUri: ./src/ServerlessTextToSpeech.ProcessTextAndSendToPolly
+      Handler: ServerlessTextToSpeech.ProcessTextAndSendToPolly
       Environment:
         Variables:
           SOUND_BUCKET: !Ref SoundBucket
           SOUND_PREFIX: !Ref SoundPrefix
           POLLY_TOPIC: !Ref PollyTopic
-          POLLY_VOICE: !Ref Voice
+          POLLY_VOICE: !Ref PollyVoice
       Policies:
         - arn:aws:iam::aws:policy/AmazonPollyFullAccess
         - S3CrudPolicy:
@@ -102,7 +102,7 @@ Resources:
             TableName: !Ref MetaDataTable
         - SNSCrudPolicy:
             TopicName: !Ref TextractTopic
-        - Statement:
+        - Statement:        
             - Sid: StepFunctions
               Effect: Allow
               Action:
@@ -142,12 +142,12 @@ Resources:
           Properties:
             Topic: !Ref PollyTopic
 
-  PublishMetaData:
+  PublishResults:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Join ['-', ['PublishMetaData', !Ref Environment]]
-      CodeUri: ./src/ServerlessTextToSpeech.PublishMetaData
-      Handler: ServerlessTextToSpeech.PublishMetaData
+      FunctionName: !Join ['-', ['PublishResults', !Ref Environment]]
+      CodeUri: ./src/ServerlessTextToSpeech.PublishResults
+      Handler: ServerlessTextToSpeech.PublishResults
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref SoundBucket
@@ -233,8 +233,8 @@ Resources:
       DefinitionSubstitutions:
         TextractOutputBucket: !Ref OutputBucket
         SendToTextractFunction: !GetAtt SendToTextract.Arn
-        PublishMetadataFunction: !GetAtt PublishMetaData.Arn
-        ProcessTextFunction: !GetAtt ProcessTextAndSendToPolly.Arn
+        PublishResultsFunction: !GetAtt PublishResults.Arn
+        ProcessTextAndSendToPollyFunction: !GetAtt ProcessTextAndSendToPolly.Arn
         SuccessTopic: !Ref SuccessTopic
         FailureTopic: !Ref FailureTopic
         MetadataTable: !GetAtt MetaDataTable.Arn
@@ -318,7 +318,7 @@ Resources:
                   - lambda:InvokeFunction
                 Resource:
                   - !GetAtt SendToTextract.Arn
-                  - !GetAtt PublishMetaData.Arn
+                  - !GetAtt PublishResults.Arn
                   - !GetAtt ProcessTextAndSendToPolly.Arn
               - Sid: GetSourceData
                 Effect: Allow
@@ -384,7 +384,17 @@ Resources:
 
 Outputs:
   ApiUrl:
-      Description: "Sound Function URL Endpoint"
-      Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/"
-
-
+    Description: "Sound Function URL Endpoint"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/"
+  SuccessTopic:
+    Description: "SNS Topic Published When the Text-To-Speech Function Succeeds"
+    Value: !Ref SuccessTopic
+  FailureTopic:
+    Description: "SNS Topic Published When the Text-To-Speech Function Fails"
+    Value: !Ref FailureTopic
+  SourceBucket:
+    Description: S3 Bucket where PDF files should be placed for analysis
+    Value: !Ref SourceBucket
+  SoundBucket:
+    Description: Location of processed Sound Filess
+    Value: !Ref SoundBucket

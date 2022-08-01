@@ -58,6 +58,6 @@ If already installed check if new version is available.
 
 Deploy function to AWS Lambda
 ```
-    cd "ServerlessTextToSpeech.PublishMetaData/src/ServerlessTextToSpeech.PublishMetaData"
+    cd "ServerlessTextToSpeech.SendToPolly/src/ServerlessTextToSpeech.SendToPolly"
     dotnet lambda deploy-function
 ```

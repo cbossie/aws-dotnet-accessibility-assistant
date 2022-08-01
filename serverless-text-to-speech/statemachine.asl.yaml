@@ -33,7 +33,7 @@ States:
         IntervalSeconds: 2
         MaxAttempts: 6
         BackoffRate: 2
-    Next: GetTextBlocks
+    Next: ProcessTextAndSendToPolly
     Catch:
       - ErrorEquals:
           - States.ALL
@@ -48,7 +48,7 @@ States:
     Next: Fail
   Fail:
     Type: Fail
-  GetTextBlocks:
+  ProcessTextAndSendToPolly:
     Type: Task
     Resource: 'arn:aws:states:::lambda:invoke.waitForTaskToken'
     OutputPath: $.Payload
@@ -56,7 +56,7 @@ States:
       Payload:
         id.$: $.id
         pollytasktokenid.$: $$.Task.Token
-      FunctionName: '${ProcessTextFunction}'
+      FunctionName: '${ProcessTextAndSendToPollyFunction}'
     Retry:
       - ErrorEquals:
           - Lambda.ServiceException
@@ -65,18 +65,18 @@ States:
         IntervalSeconds: 2
         MaxAttempts: 6
         BackoffRate: 2
-    Next: PublishMetadata
+    Next: PublishResults
     Catch:
       - ErrorEquals:
           - States.ALL
         Next: PublishFail
-  PublishMetadata:
+  PublishResults:
     Type: Task
     Resource: 'arn:aws:states:::lambda:invoke'
     OutputPath: $.Payload
     Parameters:
       Payload.$: $
-      FunctionName: '${PublishMetadataFunction}'
+      FunctionName: '${PublishResultsFunction}'
     Retry:
       - ErrorEquals:
           - Lambda.ServiceException

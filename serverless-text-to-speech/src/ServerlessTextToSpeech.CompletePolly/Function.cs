@@ -14,8 +14,6 @@ Bootstrap.ConfigureServices();
 // The function handler that will be called for each Lambda event
 var handler = async (SNSEvent snsEvent, ILambdaContext context) =>
 {
-    context.Logger.LogInformation(JsonSerializer.Serialize(snsEvent));
-
     var dynamoDBContext = Bootstrap.ServiceProvider.GetRequiredService<IDynamoDBContext>();
     var stepFunctionsCli = Bootstrap.ServiceProvider.GetRequiredService<IAmazonStepFunctions>();
     try
@@ -57,7 +55,6 @@ var handler = async (SNSEvent snsEvent, ILambdaContext context) =>
     {
         context.Logger.LogError(ex.Message);
     }
-    context.Logger.LogInformation("Done");
 };
 
 // Build the Lambda runtime client passing in the handler to call for each
