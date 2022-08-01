@@ -8,6 +8,7 @@ using Amazon.DynamoDBv2.DataModel;
 using ServerlessTextToSpeech.Common;
 using ServerlessTextToSpeech.Common.Model;
 using System.Text.Json;
+using Amazon.S3;
 
 // Bootstrap DI Container.
 Bootstrap.ConfigureServices();
@@ -19,6 +20,21 @@ var handler = async (TextToSpeechModel inputModel, ILambdaContext context) =>
     // Get Required Services
     var textractCli = Bootstrap.ServiceProvider.GetRequiredService<IAmazonTextract>();
     var dynamoDBContext = Bootstrap.ServiceProvider.GetRequiredService<IDynamoDBContext>();
+    var s3Cli = Bootstrap.ServiceProvider.GetRequiredService<IAmazonS3>();
+
+    // Get tags. If there is an "ID" tag on the object, then use it as the ID. Otherwise, use the provided one.
+    var itemTags = await s3Cli.GetObjectTaggingAsync(new()
+    {
+        BucketName = inputModel.BucketName,
+        Key = inputModel.ObjectKey
+    });
+
+    var id = itemTags.Tagging.FirstOrDefault(t => t.Key == Environment.GetEnvironmentVariable("ID_KEY"));
+    if(id?.Value is not null)
+    {
+        // If we supplied an tag on the S3 Object corresponding to the desired id, we'll use that. Otherwise we'll use the supplied id
+        inputModel.Id = id.Value;
+    }
 
     //Submit to Textract
     var startDocProcessResult = await textractCli.StartDocumentTextDetectionAsync(new()

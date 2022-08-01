@@ -94,7 +94,12 @@ States:
     Type: Task
     Resource: 'arn:aws:states:::sns:publish'
     Parameters:
-      Message.$: $
+      Message:
+        id.$: $.id
+        bucket.$: $.bucket
+        key.$: $.key
+        pollyoutputuri.$: $.pollyoutputuri
+        soundfileurl.$: "States.Format('{}{}', '${FunctionUrl}', $.id)"
       TopicArn: '${SuccessTopic}'
     Next: Success
     Catch:

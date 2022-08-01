@@ -22,6 +22,9 @@ Parameters:
   Voice:
     Type: String
     Default: Matthew
+  S3IdKey:
+    Type: String
+    Default: id
 
 Globals:
   # Global attributes for each function
@@ -45,13 +48,14 @@ Resources:
       Handler: ServerlessTextToSpeech.SendToTextract
       Environment:
         Variables:
+          ID_KEY: !Ref S3IdKey
           TEXTRACT_ROLE: !GetAtt TextractRole.Arn
           TEXTRACT_TOPIC: !Ref TextractTopic
           OUTPUT_BUCKET: !Ref OutputBucket
           OUTPUT_PREFIX: !Ref OutputPrefix
       Policies:
         - arn:aws:iam::aws:policy/AmazonTextractFullAccess
-        - S3CrudPolicy:
+        - S3FullAccessPolicy:
             BucketName: !Ref SourceBucket
         - S3CrudPolicy:
             BucketName: !Ref OutputBucket
@@ -153,26 +157,30 @@ Resources:
 
 
   # Url to get the sound file
-  # SoundFileFunction:
-  #   Type: AWS::Serverless::Function
-  #   Properties:
-  #     FunctionName: !Join ['-', ['SoundFileUrl', !Ref Environment]]
-  #     CodeUri: ./src/ServerlessTextToSpeech.SoundFileUrl
-  #     Handler: ServerlessTextToSpeech.SoundFileUrl
-  #     FunctionUrlConfig:
-  #       AuthType: NONE
-  #     Environment:
-  #       Variables:
-  #         URL_EXPIRATION: 30
-  #     Policies:
-  #       - S3CrudPolicy:
-  #           BucketName: !Ref SoundBucket
-  #       - !Ref DescribeTablePolicy
-  #       - DynamoDBCrudPolicy:
-  #           TableName: !Ref MetaDataTable
-  #       - arn:aws:iam::aws:policy/AmazonS3FullAccess
- 
- 
+  SoundFileFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Join ['-', ['SoundFileUrl', !Ref Environment]]
+      CodeUri: ./src/ServerlessTextToSpeech.SoundFileUrl
+      Handler: ServerlessTextToSpeech.SoundFileUrl
+      Environment:
+        Variables:
+          URL_EXPIRATION: 30
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref SoundBucket
+        - !Ref DescribeTablePolicy
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MetaDataTable
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      Events:
+        Http:
+          Type: HttpApi
+          Properties:
+            Path: /{id}
+            Method: GET
+
+
   #S3 buckets
   SourceBucket:
     Type: AWS::S3::Bucket
@@ -232,6 +240,7 @@ Resources:
         MetadataTable: !GetAtt MetaDataTable.Arn
         TextractTopic: !Ref TextractTopic
         TextractRole: !GetAtt TextractRole.Arn
+        FunctionUrl: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/"
       Role: !GetAtt StateMachineRole.Arn
 
   #Roles and Policies (IAM)
@@ -373,10 +382,9 @@ Resources:
       TopicName: !Join ["-", ["TextToSpeechFailure", !Ref Environment]]
 
 
-# Outputs:
-#   SoundFileFunctionUrl:
-#       Description: "Sound Function URL Endpoint"
-#       Value:
-#         Fn::GetAtt: SoundFileFunctionUrl.FunctionUrl
+Outputs:
+  ApiUrl:
+      Description: "Sound Function URL Endpoint"
+      Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/"
 
 

@@ -29,7 +29,7 @@ var handler = async (APIGatewayProxyRequest request, ILambdaContext context) =>
     string referralUrl = null;
     try
     {
-        string id = request.QueryStringParameters["id"];
+        string id = request.PathParameters["id"];
         context.Logger.LogInformation($"ID = {id}");
         var data = await dynamoDBContext.LoadAsync<TextToSpeechModel>(id);
 
