@@ -62,6 +62,8 @@ var handler = async (TextToSpeechModel inputModel, ILambdaContext context) =>
     await dynamoDBContext.SaveAsync(textToSpeechModel);
 };
 
+
+
 // Build the Lambda runtime client passing in the handler to call for each
 // event and the JSON serializer to use for translating Lambda JSON documents
 // to .NET types.

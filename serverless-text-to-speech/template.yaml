@@ -54,7 +54,6 @@ Resources:
           OUTPUT_BUCKET: !Ref OutputBucket
           OUTPUT_PREFIX: !Ref OutputPrefix
       Policies:
-        - arn:aws:iam::aws:policy/AmazonTextractFullAccess
         - S3FullAccessPolicy:
             BucketName: !Ref SourceBucket
         - S3CrudPolicy:
@@ -62,6 +61,7 @@ Resources:
         - !Ref DescribeTablePolicy
         - DynamoDBCrudPolicy:
             TableName: !Ref MetaDataTable
+        - arn:aws:iam::aws:policy/AmazonTextractFullAccess            
 
   ProcessTextAndSendToPolly:
     Type: AWS::Serverless::Function
@@ -169,7 +169,7 @@ Resources:
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref SoundBucket
-        - !Ref DescribeTablePolicy
+        - !Ref DescribeTablePolicy 
         - DynamoDBCrudPolicy:
             TableName: !Ref MetaDataTable
         - arn:aws:iam::aws:policy/AmazonS3FullAccess
