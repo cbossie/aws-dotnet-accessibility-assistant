@@ -14,6 +14,10 @@ samconfig.toml
 .vsdbg/
 .vscode/
 omnisharp.json
+*.docx
+*.drawio.bkp
+assets/*.pdf
+assets/Features.txt
 ### DotSettings ###
 *.DotSettings
 ### Linux ###
