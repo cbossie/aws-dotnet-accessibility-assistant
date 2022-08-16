@@ -1,9 +1,9 @@
+using Amazon.DynamoDBv2.DataModel;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
 using Amazon.Lambda.RuntimeSupport;
 using Amazon.Lambda.Serialization.SystemTextJson;
 using Amazon.S3;
-using Amazon.DynamoDBv2.DataModel;
 using ServerlessTextToSpeech.Common;
 using ServerlessTextToSpeech.Common.Model;
 
@@ -15,8 +15,7 @@ var handler = async (APIGatewayProxyRequest request, ILambdaContext context) =>
 {
     var s3Client = Bootstrap.ServiceProvider.GetRequiredService<IAmazonS3>();
     var dynamoDBContext = Bootstrap.ServiceProvider.GetRequiredService<IDynamoDBContext>();
-    int expirationSecond;
-    if(!int.TryParse(Environment.GetEnvironmentVariable("URL_EXPIRATION"), out expirationSecond))
+    if (!int.TryParse(Environment.GetEnvironmentVariable("URL_EXPIRATION"), out int expirationSecond))
     {
         expirationSecond = 30; // 30 seconds by default
     }
@@ -24,7 +23,6 @@ var handler = async (APIGatewayProxyRequest request, ILambdaContext context) =>
 
     int statusCode = 302;
     Dictionary<string, string> headers = new();
-    string referralUrl = null;
     try
     {
         string id = request.PathParameters["id"];
@@ -41,7 +39,7 @@ var handler = async (APIGatewayProxyRequest request, ILambdaContext context) =>
                 Key = data.SoundKey,
                 Expires = DateTime.Now.AddSeconds(expirationSecond)
             });
-            headers.Add("Location",     url);
+            headers.Add("Location", url);
             headers.Add("Content-Encoding", "audio/mpeg");
         }
     }
@@ -51,7 +49,7 @@ var handler = async (APIGatewayProxyRequest request, ILambdaContext context) =>
         context.Logger.LogError(ex.StackTrace);
         statusCode = 500;
     }
-       
+
     return new APIGatewayProxyResponse
     {
         StatusCode = statusCode,

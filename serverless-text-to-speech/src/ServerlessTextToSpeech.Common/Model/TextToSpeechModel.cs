@@ -1,5 +1,4 @@
-﻿using System.Text.Json.Serialization;
-using Amazon.DynamoDBv2.DataModel;
+﻿using Amazon.DynamoDBv2.DataModel;
 
 
 namespace ServerlessTextToSpeech.Common.Model;
@@ -29,7 +28,7 @@ public class TextToSpeechModel
     public string? TextractJobId { get; set; }
 
     [JsonPropertyName("tasktokenid")]
-    public string? TaskToken {get;set;}
+    public string? TaskToken { get; set; }
 
     [JsonPropertyName("pollyjobid")]
     public string? PollyJobId { get; set; }

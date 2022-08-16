@@ -20,7 +20,13 @@ var handler = async (TextToSpeechModel inputModel, ILambdaContext context) =>
     textToSpeechModel.TaskToken = null;
     textToSpeechModel.TextractJobId = null;
 
-    Uri uri = new Uri(inputModel.PollyOutputUri);
+
+    if (inputModel.PollyOutputUri is null)
+    {
+        throw new NullReferenceException($"inputModel.{nameof(TextToSpeechModel.PollyOutputUri)} is null");
+    }
+
+    Uri uri = new(inputModel.PollyOutputUri);
     // The first segment is the URL, and the second segment is the bucket
     textToSpeechModel.SoundKey = string.Join('/', uri.Segments.Skip(2));
 

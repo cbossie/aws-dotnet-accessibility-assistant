@@ -4,24 +4,38 @@ Description: >
   Serverless Text to Speech Workflow
 
 Parameters:
+  # A short string that is appended on to the end of resource names
+  # in order to differentiate between different instances in the same
+  # account/region. This defaults to "dev".
   Environment:
     Type: String
     Default: dev
     AllowedValues:
       - dev
       - test
+      - stage
       - prod
+  # OutputPrefix - An S3 Prefix ("folder") that is prepended on
+  # to each textract raw output. This is a required value in Amazon Textract,
+  # so a default value of "output" is specified.
   OutputPrefix:
     Type: String
     Default: output
     MinLength: "1"
+  #  An S3 Prefix ("folder") that is prepended on to each sound file.
+  # Since this is a required value, then a default value of "sounds" is used.
   SoundPrefix:
     Type: String
     Default: sounds/
     MinLength: "1"
+  # The voice that will be used with Amazon Polly.
+  # It is important to make sure that you use a supported voice.
   PollyVoice:
     Type: String
     Default: Matthew
+  # The tag key that will, if supplied, contain the unique ID for
+  # this process. Otherwise a random value will be supplied. The
+  # default value is "id".
   S3IdKey:
     Type: String
     Default: id
@@ -37,9 +51,17 @@ Globals:
     Environment:
       Variables:
         STAGE_NAME: !Ref Environment
+    # TODO - Add Tags
+
+
 
 Resources:
-  #Functions Used for AI / ML
+  ###############################
+  # Section: AWS Lambda Functions
+  ###############################
+
+  # Submits the PDF to Amazon Textract using the AWS SDK for .NET.
+  # This is a part of an AWS Step Function state machine.
   SendToTextract:
     Type: AWS::Serverless::Function
     Properties:
@@ -61,8 +83,10 @@ Resources:
         - !Ref DescribeTablePolicy
         - DynamoDBCrudPolicy:
             TableName: !Ref MetaDataTable
-        - arn:aws:iam::aws:policy/AmazonTextractFullAccess            
+        - arn:aws:iam::aws:policy/AmazonTextractFullAccess
 
+  # Submits the processed text from Textract to Amazon Polly
+  # for conversion to speech using the AWS SDK for .NET.
   ProcessTextAndSendToPolly:
     Type: AWS::Serverless::Function
     Properties:
@@ -90,7 +114,8 @@ Resources:
         ## TODO - Need to update this and remove
         - arn:aws:iam::aws:policy/AmazonSNSFullAccess
 
-  #Callback Function for Textract Job
+# Function that is triggered (via SNS) when textract processing is complete.
+# Its job is to restart the paused step function.
   NotifyTextractComplete:
     Type: AWS::Serverless::Function
     Properties:
@@ -102,7 +127,7 @@ Resources:
             TableName: !Ref MetaDataTable
         - SNSCrudPolicy:
             TopicName: !Ref TextractTopic
-        - Statement:        
+        - Statement:
             - Sid: StepFunctions
               Effect: Allow
               Action:
@@ -116,7 +141,8 @@ Resources:
           Properties:
             Topic: !Ref TextractTopic
 
-  #Callback Function for Polly Job
+  # Function that is triggered (via SNS) once the Polly Processing
+  # is complete. Its job is to restart the paused step function.
   NotifyPollyComplete:
     Type: AWS::Serverless::Function
     Properties:
@@ -141,7 +167,8 @@ Resources:
           Type: SNS
           Properties:
             Topic: !Ref PollyTopic
-
+  # Function that publishes the final results to DynamoDB using
+  # the AWS SDK for .NET (Object Persistence Model).
   PublishResults:
     Type: AWS::Serverless::Function
     Properties:
@@ -155,8 +182,9 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref MetaDataTable
 
-
-  # Url to get the sound file
+  # Function that sits behind an Amazon API Gateway and when invoked,
+  # returns a signed URL to retrieve the MP3 file referred to by the
+  # key directly from Amazon S3.
   SoundFileFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -169,9 +197,10 @@ Resources:
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref SoundBucket
-        - !Ref DescribeTablePolicy 
+        - !Ref DescribeTablePolicy
         - DynamoDBCrudPolicy:
             TableName: !Ref MetaDataTable
+        # TODO - Rein this in
         - arn:aws:iam::aws:policy/AmazonS3FullAccess
       Events:
         Http:
@@ -180,8 +209,11 @@ Resources:
             Path: /{id}
             Method: GET
 
+  ###############################
+  # Section: Amazon S3 Buckets
+  ###############################
 
-  #S3 buckets
+  # Bucket where PDF files are placed for processing.
   SourceBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -189,22 +221,35 @@ Resources:
       NotificationConfiguration:
         EventBridgeConfiguration:
           EventBridgeEnabled: true
+
+  # Bucket where the raw Textract output is placed.
   OutputBucket:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Join ["-", ["serverless-output-data", !Ref Environment]]
+
+  # Bucket where the finished mp3 files are placed.
   SoundBucket:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Join ["-", ["serverless-sound-files", !Ref Environment]]
 
-  #Database
+  ###############################
+  # Section: Amazon DynamoDB
+  ###############################
+
+  # The metadata for the PDF to mp3 process is stored here.
   MetaDataTable:
     Type: AWS::Serverless::SimpleTable
     Properties:
       TableName: !Join ["-", [!Ref Environment, "TextToSpeechData"]]
 
-  #EventBridge
+  ###################################
+  # Section: Amazon EventBridge Rules
+  ###################################
+
+  # EventBridge rule that, when a PDF file is placed into
+  # "SourceBucket", will trigger the AWS Step Function directly.
   NotifyFileUploadedRule:
     Type: AWS::Events::Rule
     Properties:
@@ -219,12 +264,17 @@ Resources:
             name:
               - !Ref SourceBucket
       Targets:
-        - Arn: !GetAtt ProcessStateMachine.Arn
-          RoleArn: !GetAtt StateMachineEventRole.Arn
+        - Arn: !GetAtt ProcessFileStateMachine.Arn
+          RoleArn: !GetAtt StartStepFunctionRole.Arn
           Id: stepFunctionExecution
+  ###################################
+  # Section: AWS Step Functions
+  ###################################
 
-  #Step Functions
-  ProcessStateMachine:
+  # Step function, defined by the "statemachine.asl.yaml" file, defines the
+  # entire process of converting the text in the uploaded PDF file
+  # into an mp3 file.
+  ProcessFileStateMachine:
     Type: AWS::Serverless::StateMachine
     Properties:
       Name: "TextToSpeechStateMachine"
@@ -243,8 +293,13 @@ Resources:
         FunctionUrl: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/"
       Role: !GetAtt StateMachineRole.Arn
 
-  #Roles and Policies (IAM)
-  StateMachineEventRole:
+  #############################################
+  # Section: AWS Identity and Access Management
+  #############################################
+
+  # Role that is assigned to the EventBridge Rule that
+  # allows it to start the processing Step Function
+  StartStepFunctionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -263,9 +318,11 @@ Resources:
             Statement:
               - Effect: Allow
                 Action: states:StartExecution
-                Resource: !GetAtt ProcessStateMachine.Arn
+                Resource: !GetAtt ProcessFileStateMachine.Arn
 
-  #IAM Policy required for using this table with .NET Object Persistence Model. Crud template does not have "describetable"
+  # IAM Policy required for using the Metadata table with .NET Object
+  # Persistence Model. The DynamoDB CRUD template does not have "describetable",
+  # which is required.
   DescribeTablePolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -291,6 +348,7 @@ Resources:
                 - states.amazonaws.com
             Action:
               - "sts:AssumeRole"
+      # TODO Only Allow the buckets we need...Maybe get rid of it!!
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonS3FullAccess
       Policies:
@@ -326,7 +384,8 @@ Resources:
                 Resource: !Join ["/", [!GetAtt SourceBucket.Arn, "*"]]
           PolicyName: LambdaExecution
 
-  #Role used for Textract
+  # IAM Role that allows Textract to access the appropriate S3 buckets
+  # and publish to the notification SNS topic
   TextractRole:
     Type: AWS::IAM::Role
     Properties:
@@ -359,22 +418,37 @@ Resources:
                 Action: s3:PutObject
                 Resource: !Join ["/", [!GetAtt OutputBucket.Arn, "*"]]
           PolicyName: TextractRole
-  #SNS Topics
+
+  #############################################
+  # Section: AWS Identity and Access Management
+  #############################################
+
+  # Textract will publish a completion message to this topic when
+  # processing is complete.
   TextractTopic:
     Type: AWS::SNS::Topic
     Properties:
       DisplayName: !Join ["-", ["TextractTopic", !Ref Environment]]
       TopicName: !Join ["-", ["TextractNotify", !Ref Environment]]
+
+  # Polly will publish a completion mesage to this topic when
+  # processing is complete.
   PollyTopic:
     Type: AWS::SNS::Topic
     Properties:
       DisplayName: !Join ["-", ["PollyTopic", !Ref Environment]]
       TopicName: !Join ["-", ["PollyNotify", !Ref Environment]]
+
+  # When the Step Function is done processing successfully,
+  # it will publish a message to this topic.
   SuccessTopic:
     Type: AWS::SNS::Topic
     Properties:
       DisplayName: !Join ["-", ["TextToSpeechSuccess", !Ref Environment]]
       TopicName: !Join ["-", ["TextToSpeechSuccess", !Ref Environment]]
+
+  # When the Step Function is done processing with errors, it
+  # will publish a message to this topic.
   FailureTopic:
     Type: AWS::SNS::Topic
     Properties:
@@ -383,18 +457,22 @@ Resources:
 
 
 Outputs:
+  # The URL that can be called to retrieve the signed URL for the sound file.
   ApiUrl:
     Description: "Sound Function URL Endpoint"
     Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/"
+
+  # SNS Topic Published When the Text-To-Speech Process Succeeds
   SuccessTopic:
-    Description: "SNS Topic Published When the Text-To-Speech Function Succeeds"
+    Description: "SNS Topic Published When the Text-To-Speech Process Succeeds"
     Value: !Ref SuccessTopic
+
+  # SNS Topic Published When the Text-To-Speech Process Fails
   FailureTopic:
-    Description: "SNS Topic Published When the Text-To-Speech Function Fails"
+    Description: "SNS Topic Published When the Text-To-Speech Process Fails"
     Value: !Ref FailureTopic
+
+  #
   SourceBucket:
-    Description: S3 Bucket where PDF files should be placed for analysis
+    Description: S3 Bucket where PDF files should be placed for processing
     Value: !Ref SourceBucket
-  SoundBucket:
-    Description: Location of processed Sound Filess
-    Value: !Ref SoundBucket

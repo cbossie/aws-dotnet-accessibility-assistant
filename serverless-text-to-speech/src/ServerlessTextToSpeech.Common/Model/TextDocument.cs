@@ -1,23 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace ServerlessTextToSpeech.Common.Model;
+﻿namespace ServerlessTextToSpeech.Common.Model;
 
 public class TextDocument
 {
-    private List<TextBlock> TextBlocks { get; } = new ();
+    private List<TextBlock> TextBlocks { get; } = new();
 
     public void AddText(string text) => TextBlocks.Add(new(text));
 
     public IEnumerable<string?> GetDocumentParagraphs(bool addParagraphBreaks = false)
     {
-        foreach(var block in TextBlocks)
+        foreach (var block in TextBlocks)
         {
             yield return block.Text;
-            if(addParagraphBreaks)
+            if (addParagraphBreaks)
             {
                 yield return Environment.NewLine;
             }
@@ -27,7 +21,7 @@ public class TextDocument
     public string GetDocument(bool addParagraphBreaks = false)
     {
         StringBuilder bldr = new();
-        foreach(var str in GetDocumentParagraphs(addParagraphBreaks))
+        foreach (var str in GetDocumentParagraphs(addParagraphBreaks))
         {
             bldr.Append(str);
         }

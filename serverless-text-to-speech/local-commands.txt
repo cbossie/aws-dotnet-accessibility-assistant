@@ -1,3 +1,0 @@
-# Deploy to dev
-
-cdk deploy --profile dotnet-ohio --verbose tts-dev

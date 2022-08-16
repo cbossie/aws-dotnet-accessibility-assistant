@@ -1,13 +1,13 @@
+using Amazon.DynamoDBv2.DataModel;
 using Amazon.Lambda.Core;
 using Amazon.Lambda.RuntimeSupport;
 using Amazon.Lambda.Serialization.SystemTextJson;
-using ServerlessTextToSpeech.Common;
-using ServerlessTextToSpeech.Common.Model;
+using Amazon.Polly;
 using Amazon.Textract;
 using Amazon.Textract.Model;
+using ServerlessTextToSpeech.Common;
+using ServerlessTextToSpeech.Common.Model;
 using ServerlessTextToSpeech.Common.Services;
-using Amazon.Polly;
-using Amazon.DynamoDBv2.DataModel;
 
 // Bootstrap DI Container.
 Bootstrap.ConfigureServices();
@@ -25,7 +25,7 @@ var handler = async (TextToSpeechModel inputModel, ILambdaContext context) =>
     textToSpeechModel.PollyTaskToken = inputModel.PollyTaskToken;
 
     //Retrieve the data from Textract
-    List<Block> resultBlocks = new List<Block>();
+    List<Block> resultBlocks = new();
     string? token = null;
     do
     {
@@ -57,7 +57,7 @@ var handler = async (TextToSpeechModel inputModel, ILambdaContext context) =>
     textToSpeechModel.PollyJobId = pollyStartResult.SynthesisTask.TaskId;
     textToSpeechModel.PollyOutputUri = pollyStartResult.SynthesisTask.OutputUri;
     textToSpeechModel.SoundBucket = Environment.GetEnvironmentVariable("SOUND_BUCKET");
- 
+
     // Save the data out to DynamoDB
     await dynamoDBContext.SaveAsync(textToSpeechModel);
 };

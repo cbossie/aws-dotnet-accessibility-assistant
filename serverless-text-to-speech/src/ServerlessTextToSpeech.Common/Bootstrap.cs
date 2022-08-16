@@ -1,24 +1,22 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Amazon;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.Polly;
-using Amazon.Textract;
-using Amazon.StepFunctions;
-using Amazon;
-using ServerlessTextToSpeech.Common.Services;
 using Amazon.S3;
+using Amazon.StepFunctions;
+using Amazon.Textract;
+using Microsoft.Extensions.DependencyInjection;
+using ServerlessTextToSpeech.Common.Services;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ServerlessTextToSpeech.Common;
 
 public static class Bootstrap
 {
     private static ServiceCollection Services { get; }
-    public static ServiceProvider ServiceProvider { get; private set; }
+
+    [NotNull]
+    public static ServiceProvider? ServiceProvider { get; private set; }
 
 
     static Bootstrap()
@@ -52,6 +50,4 @@ public static class Bootstrap
 
         ServiceProvider = Services.BuildServiceProvider();
     }
-
-
 }

@@ -19,20 +19,24 @@ var handler = async (SNSEvent snsEvent, ILambdaContext context) =>
     try
     {
         var model = JsonSerializer.Deserialize<NotifyPollyCompleteModel>(snsEvent.Records[0].Sns.Message.ToString());
+        if (model is null)
+        {
+            throw new ArgumentException("Unable to deserialize SNS Event parameter snsEvent", nameof(snsEvent));
+        }
 
         // Get the Model for the DynamoDB representation of our job
         var scanData = dynamoDBContext.ScanAsync<TextToSpeechModel>(new List<ScanCondition>
-        { 
+        {
             new (nameof(TextToSpeechModel.PollyJobId), ScanOperator.Equal, model.TaskId)
         });
 
         var textToSpeechModel = (await scanData.GetNextSetAsync()).FirstOrDefault();
-        if(textToSpeechModel is null)
+        if (textToSpeechModel is null)
         {
             throw new Exception($"Task not found");
         }
 
-        if ( model.TaskStatus != "COMPLETED")
+        if (model.TaskStatus != "COMPLETED")
         {
             context.Logger.LogInformation("Sending Failure");
             await stepFunctionsCli.SendTaskFailureAsync(new()

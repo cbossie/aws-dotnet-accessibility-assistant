@@ -21,9 +21,13 @@ var handler = async (SNSEvent snsEvent, ILambdaContext context) =>
     {
         var model = JsonSerializer.Deserialize<NotifyTextractCompleteModel>(snsEvent.Records[0].Sns.Message.ToString());
 
+        if (model is null)
+        {
+            throw new ArgumentException("Unable to deserialize snsEvent", nameof(snsEvent));
+        }
         // Get the Model for the DynamoDB representation of our job
         var jobData = await dynamoDBContext.LoadAsync<TextToSpeechModel>(model.JobTag);
-        if(model.Status != "SUCCEEDED")
+        if (model.Status != "SUCCEEDED")
         {
             context.Logger.LogInformation("Sending Failure");
             await stepFunctionsCli.SendTaskFailureAsync(new()
