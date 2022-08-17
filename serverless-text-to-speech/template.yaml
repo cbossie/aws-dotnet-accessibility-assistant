@@ -26,7 +26,7 @@ Parameters:
   # Since this is a required value, then a default value of "sounds" is used.
   SoundPrefix:
     Type: String
-    Default: sounds/
+    Default: sounds
     MinLength: "1"
   # The voice that will be used with Amazon Polly.
   # It is important to make sure that you use a supported voice.
@@ -51,7 +51,8 @@ Globals:
     Environment:
       Variables:
         STAGE_NAME: !Ref Environment
-    # TODO - Add Tags
+    Tags:
+      Application: !Ref AWS::StackName
 
 
 
@@ -107,12 +108,11 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref MetaDataTable
         - !Ref DescribeTablePolicy
-        - SNSCrudPolicy:
-            TopicName: !Ref PollyTopic
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt PollyTopic.TopicName
         - S3CrudPolicy:
             BucketName: !Ref OutputBucket
-        ## TODO - Need to update this and remove
-        - arn:aws:iam::aws:policy/AmazonSNSFullAccess
+        - !Ref SoundFileBucketPolicy
 
 # Function that is triggered (via SNS) when textract processing is complete.
 # Its job is to restart the paused step function.
@@ -125,8 +125,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref MetaDataTable
-        - SNSCrudPolicy:
-            TopicName: !Ref TextractTopic
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt TextractTopic.TopicName
         - Statement:
             - Sid: StepFunctions
               Effect: Allow
@@ -152,8 +152,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref MetaDataTable
-        - SNSCrudPolicy:
-            TopicName: !Ref PollyTopic
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt PollyTopic.TopicName
         - Statement:
             - Sid: StepFunctions
               Effect: Allow
@@ -200,8 +200,7 @@ Resources:
         - !Ref DescribeTablePolicy
         - DynamoDBCrudPolicy:
             TableName: !Ref MetaDataTable
-        # TODO - Rein this in
-        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - !Ref SoundFileBucketPolicy
       Events:
         Http:
           Type: HttpApi
@@ -277,7 +276,7 @@ Resources:
   ProcessFileStateMachine:
     Type: AWS::Serverless::StateMachine
     Properties:
-      Name: "TextToSpeechStateMachine"
+      Name: !Join ["-", ["TextToSpeechStateMachine",!Ref Environment]]
       Type: STANDARD
       DefinitionUri: ./statemachine.asl.yaml
       DefinitionSubstitutions:
@@ -334,6 +333,29 @@ Resources:
             Action: dynamodb:DescribeTable
             Resource: !GetAtt MetaDataTable.Arn
 
+  # IAM Policy to allow full access to the Sound File Bucket
+  SoundFileBucketPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Join ["-", ["SoundFileBucketPolicy", !Ref Environment]]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: s3:*
+            Resource: !Join ["/", [!GetAtt SoundBucket.Arn, "*"]]
+  # IAM Policy to allow full access to the Source File Bucket 
+  SourceFileBucketPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Join ["-", ["SourceFileBucketPolicy", !Ref Environment]]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: s3:*
+            Resource: !Join ["/", [!GetAtt SourceBucket.Arn, "*"]]
+
   #Role used for the step function
   StateMachineRole:
     Type: AWS::IAM::Role
@@ -348,9 +370,9 @@ Resources:
                 - states.amazonaws.com
             Action:
               - "sts:AssumeRole"
-      # TODO Only Allow the buckets we need...Maybe get rid of it!!
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - !Ref SoundFileBucketPolicy
+        - !Ref SourceFileBucketPolicy
       Policies:
         - PolicyDocument:
             Version: "2012-10-17"
