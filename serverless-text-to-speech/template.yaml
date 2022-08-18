@@ -178,6 +178,8 @@ Resources:
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref SoundBucket
+        - S3CrudPolicy:
+            BucketName: !Ref SourceBucket
         - !Ref DescribeTablePolicy
         - DynamoDBCrudPolicy:
             TableName: !Ref MetaDataTable
@@ -216,7 +218,7 @@ Resources:
   SourceBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Join ["-", ["serverless-source-data", !Ref Environment]]
+      BucketName: !Join ["-", ["serverless-source-data", !Ref Environment, !Ref "AWS::AccountId"]]
       NotificationConfiguration:
         EventBridgeConfiguration:
           EventBridgeEnabled: true
@@ -225,13 +227,13 @@ Resources:
   OutputBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Join ["-", ["serverless-output-data", !Ref Environment]]
+      BucketName: !Join ["-", ["serverless-output-data", !Ref Environment, !Ref "AWS::AccountId"]]
 
   # Bucket where the finished mp3 files are placed.
   SoundBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Join ["-", ["serverless-sound-files", !Ref Environment]]
+      BucketName: !Join ["-", ["serverless-sound-files", !Ref Environment, !Ref "AWS::AccountId"]]
 
   ###############################
   # Section: Amazon DynamoDB
@@ -239,9 +241,30 @@ Resources:
 
   # The metadata for the PDF to mp3 process is stored here.
   MetaDataTable:
-    Type: AWS::Serverless::SimpleTable
+    Type: AWS::DynamoDB::Table
     Properties:
       TableName: !Join ["-", [!Ref Environment, "TextToSpeechData"]]
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        -
+          AttributeName: id
+          AttributeType: S
+        -
+          AttributeName: PollyJobId
+          AttributeType: S        
+      KeySchema:
+        -
+          AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes: 
+        - 
+          IndexName: "PollyJobId"
+          Projection: 
+            ProjectionType: ALL
+          KeySchema: 
+            - 
+              AttributeName: "PollyJobId"
+              KeyType: "HASH"
 
   ###################################
   # Section: Amazon EventBridge Rules

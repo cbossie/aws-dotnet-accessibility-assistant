@@ -24,13 +24,14 @@ var handler = async (SNSEvent snsEvent, ILambdaContext context) =>
             throw new ArgumentException("Unable to deserialize SNS Event parameter snsEvent", nameof(snsEvent));
         }
 
-        // Get the Model for the DynamoDB representation of our job
-        var scanData = dynamoDBContext.ScanAsync<TextToSpeechModel>(new List<ScanCondition>
+        DynamoDBOperationConfig queryConfig = new ()
         {
-            new (nameof(TextToSpeechModel.PollyJobId), ScanOperator.Equal, model.TaskId)
-        });
+            IndexName = "PollyJobId"
+        };
 
-        var textToSpeechModel = (await scanData.GetNextSetAsync()).FirstOrDefault();
+        var queryData = dynamoDBContext.QueryAsync<TextToSpeechModel>(model.TaskId, queryConfig);
+        var textToSpeechModel = (await queryData.GetNextSetAsync()).FirstOrDefault();
+
         if (textToSpeechModel is null)
         {
             throw new Exception($"Task not found");

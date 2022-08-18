@@ -2,6 +2,7 @@ using Amazon.DynamoDBv2.DataModel;
 using Amazon.Lambda.Core;
 using Amazon.Lambda.RuntimeSupport;
 using Amazon.Lambda.Serialization.SystemTextJson;
+using Amazon.S3;
 using ServerlessTextToSpeech.Common;
 using ServerlessTextToSpeech.Common.Model;
 
@@ -12,7 +13,14 @@ Bootstrap.ConfigureServices();
 var handler = async (TextToSpeechModel inputModel, ILambdaContext context) =>
 {
     var dynamoDBContext = Bootstrap.ServiceProvider.GetRequiredService<IDynamoDBContext>();
+    var s3Client = Bootstrap.ServiceProvider.GetRequiredService<IAmazonS3>();
+
+    // Get the current run's model
     var textToSpeechModel = await dynamoDBContext.LoadAsync<TextToSpeechModel>(inputModel.Id);
+
+
+    // Delete the source files
+    await s3Client.DeleteAsync(textToSpeechModel.BucketName, textToSpeechModel.ObjectKey, null);
 
     // Update the model
     textToSpeechModel.PollyTaskToken = null;
