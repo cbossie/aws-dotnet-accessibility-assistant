@@ -131,11 +131,11 @@ This will build all the .NET code and process the SAM template. The processed as
 
 To deploy the project the first time, you can type:
 
-```sam deploy --guided```
+```sam deploy --guided --capabilities CAPABILITY_NAMED_IAM```
 
 Note: If you are using an IAM profile other than the one called "default", you will need to type the command:
 
-```sam deploy --guided --profile=profilename```
+```sam deploy --guided --profile=profilename --capabilities CAPABILITY_NAMED_IAM```
 
 You will be prompted for the following values:
 - Stack Name - What you want this CloudFormation stack to be called.
